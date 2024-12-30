@@ -38,10 +38,14 @@ process TRACKING_LOCALTRACKING {
     def local_algo = task.ext.local_algo ? "--algo " + task.ext.local_algo: ""
     def compress = task.ext.local_compress_streamlines ? "--compress " + task.ext.local_compress_value : ""
     def basis = task.ext.basis ? "--sh_basis " + task.ext.basis : ""
+    
+    // Parameters only for scil_tracking_local_dev.py
+    def local_sfthres_init = task.ext.local_sfthres ? "--sfthres_init "  + task.ext.local_sfthres_init : ""
+    def local_rk_order = task.ext.local_rk_order ? "--rk_order " + task.ext.local_rk_order : ""
+    def cmd = task.ext.cmd ? task.ext.cmd : "scil_tracking_local.py"
 
     def gpu_batch_size = task.ext.gpu_batch_size ? "--batch_size " + task.ext.gpu_batch_size : ""
     def enable_gpu = task.ext.enable_gpu ? "--use_gpu $gpu_batch_size" : ""
-
     """
     export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=1
     export OMP_NUM_THREADS=1
@@ -69,11 +73,12 @@ process TRACKING_LOCALTRACKING {
             --data_type uint8 -f
     fi
 
-    scil_tracking_local.py $fodf ${prefix}__local_seeding_mask.nii.gz \
+    $cmd $fodf ${prefix}__local_seeding_mask.nii.gz \
             ${prefix}__local_tracking_mask.nii.gz tmp.trk $enable_gpu\
             $local_algo $local_seeding $local_nbr_seeds\
             $local_random_seed $local_step $local_theta\
-            $local_sfthres $local_min_len\
+            $local_sfthres $local_sfthres_init $local_min_len\
+            $local_rk_order \
             $local_max_len $compress $basis -f
 
     scil_tractogram_remove_invalid.py tmp.trk\

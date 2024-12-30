@@ -16,11 +16,10 @@ process TRACKING_MASK {
 
     script:
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def ventricules_labels_ids = task.ext.ventricules_labels_ids ?: ""
-    def seeding_labels_ids = task.ext.seeding_labels_ids ?: ""
+    def ventricules_labels_ids = task.ext.ventricules_labels_ids ? task.ext.ventricules_labels_ids : ""
+    def seeding_labels_ids = task.ext.seeding_labels_ids ? task.ext.seeding_labels_ids : ""
 
     """
-    ANO = 
     scil_volume_math.py convert $ano $ano --data_type int16 -f
     scil_labels_combine.py ${prefix}__ventricles_mask.nii.gz \
         --volume_ids $ano $ventricules_labels_ids \

@@ -24,21 +24,16 @@ process MOUSE_REGISTRATION {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def laplacian_value = task.ext.laplacian_value ? task.ext.laplacian_value : ""
     def atlas_resolution = task.ext.atlas_resolution ? task.ext.atlas_resolution : ""
+    def atlas_50_resolution = task.ext.atlas_50_resolution 
+    def atlas_100_resolution = task.ext.atlas_100_resolution
 
     """
     export OMP_NUM_THREADS=$task.cpus
     export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=$task.cpus
     export OPENBLAS_NUM_THREADS=1
 
-    AMBA_ref=$atlas_directory/${atlas_resolution}_AMBA_ref.nii.gz
-    AMBA_inv=$atlas_directory/${atlas_resolution}_AMBA_inv.nii.gz
-    AMBA_ANO=$atlas_directory/${atlas_resolution}_AMBA_ANO.nii.gz
-    AMBA_LR=$atlas_directory/${atlas_resolution}_AMBA_LR.nii.gz
-    AMBA_ToM=$atlas_directory/${atlas_resolution}_AMBA_ToM.nii.gz
-
 	scil_dti_metrics.py $dwi $bval $bvec --mask $mask --not_all --fa ${prefix}__fa.nii.gz -f
 	scil_dwi_extract_b0.py $dwi $bval $bvec ${prefix}__b0.nii.gz -f
-
 
     # Get values to extract iterations
     extract_dim=\$(mrinfo ${prefix}__b0.nii.gz -size) 
@@ -50,12 +45,34 @@ process MOUSE_REGISTRATION {
     max_param=\$(echo \$min_res '*' \$max_dim | bc)
     step_param=\$(echo \$min_res '/' 2 | bc -l | awk '{printf "%f", \$0}')
 
-    echo "min_res max_param step_param"
-    echo \$min_res \$max_param \$step_param
-
     params_iterations=\$(ants_generate_iterations.py --min \$min_res --max \$max_param --step \$step_param | tr -d '\\')
 
-    echo \${params_iterations}
+    # Which atlas resolution is closest to the input resolution
+    if [[ -z "$atlas_resolution" ]]; then
+        min_res_mm=\$(echo \$min_res '*' 1000 | bc)
+        
+        diff1=\$(echo "scale=6; \$min_res_mm - $atlas_50_resolution" | bc | awk '{print (\$1<0)?-\$1:\$1}')
+        diff2=\$(echo "scale=6; \$min_res_mm - $atlas_100_resolution" | bc | awk '{print (\$1<0)?-\$1:\$1}')
+
+        echo \$min_res_mm  $atlas_50_resolution  $atlas_100_resolution \$diff1 \$diff2
+
+        if (( \$(echo "\$diff1 < \$diff2" | bc -l) )); then
+            atlas_resolution=50
+        else
+            atlas_resolution=100
+        fi
+    else
+        atlas_resolution=$atlas_resolution
+    fi
+
+    echo "Atlas resolution: \$atlas_resolution"
+
+    AMBA_ref=$atlas_directory/\${atlas_resolution}_AMBA_ref.nii.gz
+    AMBA_inv=$atlas_directory/\${atlas_resolution}_AMBA_inv.nii.gz
+    AMBA_ANO=$atlas_directory/\${atlas_resolution}_AMBA_ANO.nii.gz
+    AMBA_LR=$atlas_directory/\${atlas_resolution}_AMBA_LR.nii.gz
+    AMBA_ToM=$atlas_directory/\${atlas_resolution}_AMBA_ToM.nii.gz
+
 
 	ImageMath  3 ${prefix}__b0_lp.nii.gz  Laplacian ${prefix}__b0.nii.gz $laplacian_value
 	ImageMath  3 ${prefix}__fa_lp.nii.gz  Laplacian ${prefix}__fa.nii.gz $laplacian_value
