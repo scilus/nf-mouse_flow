@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/scilus/nf-neuro/main/modules/meta-schema.json
+name: "label_combine"
+description: Label Combine
+keywords:
+  - label
+  - combine
+  - group
+tools:
+  - "scilpy":
+      description: "The Sherbrooke Connectivity Imaging Lab (SCIL) Python dMRI processing toolbox."
+      homepage: "https://github.com/scilus/scilpy.git"
+input:
+  # Only when we have meta
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. `[ id:'test', single_end:false ]`
+
+  - label:
+      type: file
+      description: Label Nifti image
+      pattern: "*.{nii,nii.gz}"
+
+output:
+  #Only when we have meta
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. `[ id:'test', single_end:false ]`
+
+  - label_combined:
+      type: file
+      description: Nifti volume - Label Combined
+      pattern: "*_mask.nii.gz"
+
+  - bval_corrected:
+      type: file
+      description: B-values corrected in FSL format
+      pattern: "*__bval_eddy"
+
+  - bvec_corrected:
+      type: file
+      description: B-vectors corrected in FSL format
+      pattern: "*__dwi_eddy_corrected.bvec"
+
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+
+authors:
+  - "@arnaudbore"
