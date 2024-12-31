@@ -126,16 +126,18 @@ process MOUSE_REGISTRATION {
     antsApplyTransforms -h
     N4BiasFieldCorrection -h
 
-    touch ${prefix}__dwi_n4.nii.gz
-    touch ${prefix}__b0_n4.nii.gz
-    touch ${prefix}__bias_field_b0.nii.gz
+    touch ${prefix}__S_0GenericAffine.mat
+    touch ${prefix}__S_1InverseWarp.nii.gz
+    touch ${prefix}__S_1Warp.nii.gz
+    touch ${prefix}__ANO_LR.nii.gz
+    touch ${prefix}__ANO.nii.gz
+    touch ${prefix}__moving_check.nii.gz
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         scilpy: \$(pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
         mrtrix: \$(dwidenoise -version 2>&1 | sed -n 's/== dwidenoise \\([0-9.]\\+\\).*/\\1/p')
         fsl: \$(flirt -version 2>&1 | sed -n 's/FLIRT version \\([0-9.]\\+\\)/\\1/p')
-
     END_VERSIONS
     """
 }

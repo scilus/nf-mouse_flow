@@ -12,6 +12,7 @@ include { RECONST_FRF } from './modules/nf-neuro/reconst/frf/main.nf'
 include { RECONST_FODF } from './modules/nf-neuro/reconst/fodf/main.nf'
 include { TRACKING_MASK } from './modules/local/tracking/mask/main.nf'
 include { TRACKING_LOCALTRACKING } from './modules/nf-neuro/tracking/localtracking/main.nf'
+include { MOUSE_EXTRACTMASKS } from './modules/local/mouse/extractmasks/main.nf'
 
 workflow get_data {
     main:
@@ -124,4 +125,6 @@ workflow {
     TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
                 .join(RECONST_FODF.out.fodf)
                 .join(TRACKING_MASK.out.seeding_mask))
+    
+    MOUSE_EXTRACTMASKS(MOUSE_REGISTRATION.out.ANO)
 }
