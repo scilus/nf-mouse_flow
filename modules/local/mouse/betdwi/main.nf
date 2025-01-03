@@ -7,6 +7,8 @@ process MOUSE_BETDWI {
     input:
         tuple val(meta), path(dwi), path(bval), path(bvec)
     output:
+        tuple val(meta), path(bval)                  , emit: bval
+        tuple val(meta), path(bvec)                  , emit: bvec
         tuple val(meta), path("*__dwi_bet.nii.gz")   , emit: dwi_bet
         tuple val(meta), path("*__b0_bet.nii.gz")    , emit: b0_bet
         tuple val(meta), path("*__mask_bet.nii.gz")      , emit: mask_bet

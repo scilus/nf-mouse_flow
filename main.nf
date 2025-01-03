@@ -13,6 +13,7 @@ include { RECONST_FODF } from './modules/nf-neuro/reconst/fodf/main.nf'
 include { TRACKING_MASK } from './modules/local/tracking/mask/main.nf'
 include { TRACKING_LOCALTRACKING } from './modules/nf-neuro/tracking/localtracking/main.nf'
 include { MOUSE_EXTRACTMASKS } from './modules/local/mouse/extractmasks/main.nf'
+include { MOUSE_VOLUMEROISTATS } from './modules/local/mouse/volumeroistats/main.nf'
 
 workflow get_data {
     main:
@@ -122,9 +123,20 @@ workflow {
     TRACKING_MASK(IMAGE_CONVERT.out.image
                     .join(MOUSE_REGISTRATION.out.ANO))
     
-    TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
-                .join(RECONST_FODF.out.fodf)
-                .join(TRACKING_MASK.out.seeding_mask))
+//    TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
+//                .join(RECONST_FODF.out.fodf)
+//                .join(TRACKING_MASK.out.seeding_mask))
     
     MOUSE_EXTRACTMASKS(MOUSE_REGISTRATION.out.ANO)
+    
+    ch_metrics = RECONST_DTIMETRICS.out.md
+                    .join(RECONST_DTIMETRICS.out.fa)
+                    .join(RECONST_DTIMETRICS.out.rd)
+                    .join(RECONST_DTIMETRICS.out.ad)
+                    .map{ meta, fa, md, ad, rd ->
+                    tuple(meta, [ fa, md, ad, rd ])}
+
+    ch_for_stats = ch_metrics
+                    .combine(MOUSE_EXTRACTMASKS.out.masks_dir, by: 0)
+    MOUSE_VOLUMEROISTATS(ch_for_stats)
 }
