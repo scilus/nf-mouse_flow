@@ -40,9 +40,9 @@ process PREPROC_SINGLEEDDY {
 
     echo "--very_verbose $extra_args" >> eddy.sh
 	sh eddy.sh
-	mv dwi_eddy_corrected.nii.gz ${prefix}__dwi_corrected.nii.gz
+	mv dwi_eddy_corrected.nii.gz ${prefix}__dwi_eddy_corrected.nii.gz
 	mv dwi_eddy_corrected.eddy_rotated_bvecs ${prefix}__dwi_eddy_corrected.bvec
-    mv ${bval} ${prefix}__dwi_corrected.bval
+    mv ${bval} ${prefix}__dwi_eddy_corrected.bval
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
