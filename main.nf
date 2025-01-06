@@ -123,11 +123,11 @@ workflow {
     TRACKING_MASK(IMAGE_CONVERT.out.image
                     .join(MOUSE_REGISTRATION.out.ANO))
     
-//    TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
-//                .join(RECONST_FODF.out.fodf)
-//                .join(TRACKING_MASK.out.seeding_mask))
+    TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
+                .join(RECONST_FODF.out.fodf)
+                .join(TRACKING_MASK.out.seeding_mask))
     
-    MOUSE_EXTRACTMASKS(MOUSE_REGISTRATION.out.ANO)
+    MOUSE_EXTRACTMASKS(MOUSE_REGISTRATION.out.ANO_LR)
     
     ch_metrics = RECONST_DTIMETRICS.out.md
                     .join(RECONST_DTIMETRICS.out.fa)
