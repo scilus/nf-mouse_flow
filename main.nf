@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 include { DENOISING_MPPCA } from './modules/nf-neuro/denoising/mppca/main.nf'
 include { PREPROC_SINGLEEDDY } from './modules/local/preproc/singleeddy/main.nf'
-include { MOUSE_BETDWI } from './modules/local/mouse/betdwi/main.nf'
+include { MOUSE_BET } from './modules/local/mouse/bet/main.nf'
 include { MOUSE_N4 } from './modules/local/mouse/n4/main.nf'
 include { IMAGE_RESAMPLE as RESAMPLE_DWI} from './modules/nf-neuro/image/resample/main.nf'
 include { IMAGE_RESAMPLE as RESAMPLE_MASK} from './modules/nf-neuro/image/resample/main.nf'
@@ -12,9 +12,15 @@ include { RECONST_FRF } from './modules/nf-neuro/reconst/frf/main.nf'
 include { RECONST_FODF } from './modules/nf-neuro/reconst/fodf/main.nf'
 include { TRACKING_MASK } from './modules/local/tracking/mask/main.nf'
 include { TRACKING_LOCALTRACKING } from './modules/nf-neuro/tracking/localtracking/main.nf'
+include { TRACKING_LOCALTRACKING as TRACKING_MO } from './modules/nf-neuro/tracking/localtracking/main.nf'
+include { TRACKING_LOCALTRACKING as TRACKING_SS } from './modules/nf-neuro/tracking/localtracking/main.nf'
 include { MOUSE_EXTRACTMASKS } from './modules/local/mouse/extractmasks/main.nf'
 include { MOUSE_VOLUMEROISTATS } from './modules/local/mouse/volumeroistats/main.nf'
-
+include { MOUSE_COMBINESTATS } from './modules/local/mouse/combinestats/main.nf'
+include { MOUSE_IMAGECOMBINE as COMBINE_MO} from './modules/local/mouse/imagecombine/main.nf'
+include { MOUSE_IMAGECOMBINE as COMBINE_SS} from './modules/local/mouse/imagecombine/main.nf'
+include { MOUSE_TRACTOGRAMFILTER as FILTER_MO} from './modules/local/mouse/tractogramfilter/main.nf'
+include { MOUSE_TRACTOGRAMFILTER as FILTER_SS} from './modules/local/mouse/tractogramfilter/main.nf'
 workflow get_data {
     main:
         if ( !params.input && !params.atlas ) {
@@ -82,21 +88,24 @@ workflow {
         ch_after_eddy = ch_eddy
     }
 
-    MOUSE_BETDWI(ch_after_eddy)
+    MOUSE_BET(ch_after_eddy)
 
     if (params.run_n4) {
-        ch_N4 = MOUSE_BETDWI.out.dwi_bet.join(
-            MOUSE_BETDWI.out.b0_bet).join(
-            MOUSE_BETDWI.out.mask_bet)
+        ch_N4 = ch_after_eddy
+            .map{ meta, dwi, bval, bvec ->
+                    tuple(meta, dwi)}
+            .join(MOUSE_BET.out.b0)
+            .join(MOUSE_BET.out.mask)
         MOUSE_N4(ch_N4)
         ch_after_n4 = MOUSE_N4.out.dwi_n4
     }
     else {
-        ch_after_n4 = MOUSE_BETDWI.out.dwi_bet
+        ch_after_n4 = ch_after_eddy
+                        .map{ meta, dwi, _bval, _bvec -> tuple(meta, dwi)}
     }
 
     RESAMPLE_DWI(ch_after_n4.map{ it + [[]] })
-    RESAMPLE_MASK(MOUSE_BETDWI.out.mask_bet.map{ it + [[]] })
+    RESAMPLE_MASK(MOUSE_BET.out.mask.map{ it + [[]] })
     IMAGE_CONVERT(RESAMPLE_MASK.out.image)
     
     ch_for_mouse_registration = RESAMPLE_DWI.out.image
@@ -123,9 +132,10 @@ workflow {
     TRACKING_MASK(IMAGE_CONVERT.out.image
                     .join(MOUSE_REGISTRATION.out.ANO))
     
-    TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
-                .join(RECONST_FODF.out.fodf)
-                .join(TRACKING_MASK.out.seeding_mask))
+    TRACKING_LOCALTRACKING(RECONST_FODF.out.fodf
+                .join(TRACKING_MASK.out.tracking_mask)
+                .join(TRACKING_MASK.out.seeding_mask)
+                .map{ it + [[], []]})
     
     MOUSE_EXTRACTMASKS(MOUSE_REGISTRATION.out.ANO_LR)
     
@@ -139,4 +149,27 @@ workflow {
     ch_for_stats = ch_metrics
                     .combine(MOUSE_EXTRACTMASKS.out.masks_dir, by: 0)
     MOUSE_VOLUMEROISTATS(ch_for_stats)
+
+    all_stats = MOUSE_VOLUMEROISTATS.out.stats
+                .map{ _meta, json -> json}
+                .collect()
+    MOUSE_COMBINESTATS(all_stats)
+
+    COMBINE_MO(MOUSE_EXTRACTMASKS.out.masks_MO)
+    COMBINE_SS(MOUSE_EXTRACTMASKS.out.masks_SS)
+
+    TRACKING_MO(RECONST_FODF.out.fodf
+                 .map{it + [[], []]}
+                 .join(COMBINE_MO.out.mask_combined)
+                 .join(TRACKING_MASK.out.tracking_mask))
+
+    TRACKING_SS(RECONST_FODF.out.fodf
+                .map{it + [[], []]}
+                .join(COMBINE_SS.out.mask_combined)
+                .join(TRACKING_MASK.out.tracking_mask))
+    
+    FILTER_MO(TRACKING_MO.out.trk
+        .join(MOUSE_EXTRACTMASKS.out.masks_MO))
+    FILTER_SS(TRACKING_SS.out.trk
+        .join(MOUSE_EXTRACTMASKS.out.masks_SS))
 }

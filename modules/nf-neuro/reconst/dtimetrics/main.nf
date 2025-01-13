@@ -3,9 +3,7 @@ process RECONST_DTIMETRICS {
     tag "$meta.id"
     label 'process_single'
 
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://scil.usherbrooke.ca/containers/scilus_2.0.2.sif':
-        'scilus/scilus:2.0.2' }"
+    container 'scilus/scilus:latest'
 
     input:
         tuple val(meta), path(dwi), path(bval), path(bvec), path(b0mask)
@@ -38,6 +36,7 @@ process RECONST_DTIMETRICS {
         tuple val(meta), path("*__residual_q3_residuals.npy")      , emit: residual_q3_residuals, optional: true
         tuple val(meta), path("*__residual_residuals_stats.png")   , emit: residual_residuals_stats, optional: true
         tuple val(meta), path("*__residual_std_residuals.npy")     , emit: residual_std_residuals, optional: true
+        tuple val(meta), path("*__metrics_mqc.png")                , emit: png, optional: true
         path "versions.yml"                                        , emit: versions
 
     when:
@@ -51,6 +50,7 @@ process RECONST_DTIMETRICS {
     def b0_thr_extract_b0 = task.ext.b0_thr_extract_b0 ?: 10
     def b0_threshold = task.ext.b0_thr_extract_b0 ? "--b0_threshold $task.ext.b0_thr_extract_b0" : ""
     def dti_shells = task.ext.dti_shells ?: "\$(cut -d ' ' --output-delimiter=\$'\\n' -f 1- $bval | awk -F' ' '{v=int(\$1)}{if(v<=$max_dti_shell_value|| v<=$b0_thr_extract_b0)print v}' | uniq)"
+    def run_qc = task.ext.run_qc ?: false
 
     if ( b0mask ) args += " --mask $b0mask"
     if ( task.ext.ad ) args += " --ad ${prefix}__ad.nii.gz"
@@ -68,7 +68,6 @@ process RECONST_DTIMETRICS {
     if ( task.ext.pulsation ) args += " --pulsation ${prefix}__pulsation.nii.gz"
     if ( task.ext.residual ) args += " --residual ${prefix}__residual.nii.gz"
 
-
     """
     export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=1
     export OMP_NUM_THREADS=1
@@ -80,6 +79,23 @@ process RECONST_DTIMETRICS {
 
     scil_dti_metrics.py dwi_dti_shells.nii.gz bval_dti_shells bvec_dti_shells \
         --not_all $args $b0_threshold -f
+
+    if [ $run_qc = true ]
+    then
+        size=\$(mrinfo $dwi -size)
+        mid_slice=\$(echo \$size | awk '{print int((\$3 + 1) / 2)}')
+
+        for metric in fa ad rd md rgb residual
+        do
+            if [ -f ${prefix}__\${metric}.nii.gz ]
+            then
+                scil_viz_volume_screenshot.py ${prefix}__\${metric}.nii.gz ${prefix}__\${metric}.png \
+                    --slices \$mid_slice --axis axial \
+                    --display_lr
+            fi
+        done
+        convert ${prefix}__*_slice_*.png +append ${prefix}__metrics_mqc.png
+    fi
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

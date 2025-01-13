@@ -1,4 +1,4 @@
-process MOUSE_BETDWI {
+process MOUSE_BET {
     tag "$meta.id"
     label 'process_high'
 
@@ -9,9 +9,8 @@ process MOUSE_BETDWI {
     output:
         tuple val(meta), path(bval)                  , emit: bval
         tuple val(meta), path(bvec)                  , emit: bvec
-        tuple val(meta), path("*__dwi_bet.nii.gz")   , emit: dwi_bet
-        tuple val(meta), path("*__b0_bet.nii.gz")    , emit: b0_bet
-        tuple val(meta), path("*__mask_bet.nii.gz")      , emit: mask_bet
+        tuple val(meta), path("*__b0.nii.gz")    , emit: b0
+        tuple val(meta), path("*__mask.nii.gz")      , emit: mask
         path "versions.yml"                          , emit: versions
 
     when:
@@ -31,12 +30,11 @@ process MOUSE_BETDWI {
         ${prefix}__non_zero.bval ${prefix}__non_zero.bvec -t $dwi_shell_tolerance -f
 
     scil_volume_math.py mean ${prefix}__non_zero.nii.gz ${prefix}__mean.nii.gz -f
-    maskbackgroundnoise -i ${prefix}__mean.nii.gz -o ${prefix}__mask_bet.nii.gz --level 0.6
-    ImageMath 3 ${prefix}__mask_bet.nii.gz GetLargestComponent ${prefix}__mask_bet.nii.gz 200
-    ImageMath 3 ${prefix}__mask_bet.nii.gz FillHoles ${prefix}__mask_bet.nii.gz
+    maskbackgroundnoise -i ${prefix}__mean.nii.gz -o ${prefix}__mask.nii.gz --level 0.6
+    ImageMath 3 ${prefix}__mask.nii.gz GetLargestComponent ${prefix}__mask.nii.gz 200
+    ImageMath 3 ${prefix}__mask.nii.gz FillHoles ${prefix}__mask.nii.gz
 
-    fslmaths $dwi -mul ${prefix}__mask_bet.nii.gz ${prefix}__dwi_bet.nii.gz
-    scil_dwi_extract_b0.py ${prefix}__dwi_bet.nii.gz $bval $bvec ${prefix}__b0_bet.nii.gz -f
+    scil_dwi_extract_b0.py $dwi $bval $bvec ${prefix}__b0.nii.gz -f
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

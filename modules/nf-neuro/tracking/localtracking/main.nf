@@ -7,7 +7,7 @@ process TRACKING_LOCALTRACKING {
         'scilus/scilus:2.0.2' }"
 
     input:
-    tuple val(meta), path(wm), path(fodf), path(fa)
+    tuple val(meta), path(fodf), path(wm), path(fa), path(seeding_mask), path(tracking_mask)
 
     output:
     tuple val(meta), path("*__local_tracking.trk"), emit: trk
@@ -21,6 +21,9 @@ process TRACKING_LOCALTRACKING {
 
     script:
     def prefix = task.ext.prefix ?: "${meta.id}"
+
+    def local_tracking_mask_threshold = task.ext.local_tracking_mask_threshold ? "${task.ext.local_tracking_mask_threshold}" : ""
+    def local_seeding_mask_threshold = task.ext.local_seeding_mask_threshold ? "${task.ext.local_seeding_mask_threshold}" : ""
 
     def local_fa_tracking_mask_threshold = task.ext.local_fa_tracking_mask_threshold ? task.ext.local_fa_tracking_mask_threshold : ""
     def local_fa_seeding_mask_threshold = task.ext.local_fa_seeding_mask_threshold ? task.ext.local_fa_seeding_mask_threshold : ""
@@ -51,26 +54,53 @@ process TRACKING_LOCALTRACKING {
     export OMP_NUM_THREADS=1
     export OPENBLAS_NUM_THREADS=1
 
-    if [ "${local_tracking_mask}" == "wm" ]; then
-        scil_volume_math.py convert $wm ${prefix}__local_tracking_mask.nii.gz \
-            --data_type uint8 -f
+    if [[ -f "$wm" ]] || [[ -f "$fa" ]]
+    then
+        if [ "${local_tracking_mask}" == "wm" ]
+        then
+            scil_volume_math.py convert $wm ${prefix}__local_tracking_mask.nii.gz \
+                --data_type uint8 -f
+        elif [ "${local_tracking_mask}" == "fa" ]
+        then
+            scil_volume_math.py lower_threshold $fa \
+                $local_fa_tracking_mask_threshold \
+                ${prefix}__local_tracking_mask.nii.gz \
+                --data_type uint8 -f
+        fi
 
-    elif [ "${local_tracking_mask}" == "fa" ]; then
-        scil_volume_math.py lower_threshold $fa \
-            $local_fa_tracking_mask_threshold \
-            ${prefix}__local_tracking_mask.nii.gz \
-            --data_type uint8 -f
-    fi
+        if [ "${local_seeding_mask}" == "wm" ]
+        then
+            scil_volume_math.py convert $wm ${prefix}__local_seeding_mask.nii.gz \
+                --data_type uint8 -f
+        elif [ "${local_seeding_mask}" == "fa" ]
+        then
+            scil_volume_math.py lower_threshold $fa \
+                $local_fa_seeding_mask_threshold \
+                ${prefix}__local_seeding_mask.nii.gz \
+                --data_type uint8 -f
+        fi
+    else
+        if [ $local_seeding_mask_threshold ]
+        then
+            scil_volume_math.py lower_threshold $seeding_mask \
+                $local_seeding_mask_threshold \
+                ${prefix}__local_seeding_mask.nii.gz \
+                --data_type uint8 -f
+        else
+            scil_volume_math.py convert $seeding_mask ${prefix}__local_seeding_mask.nii.gz \
+                --data_type uint8 -f
+        fi
 
-    if [ "${local_seeding_mask}" == "wm" ]; then
-        scil_volume_math.py convert $wm ${prefix}__local_seeding_mask.nii.gz \
-            --data_type uint8 -f
-
-    elif [ "${local_seeding_mask}" == "fa" ]; then
-        scil_volume_math.py lower_threshold $fa \
-            $local_fa_seeding_mask_threshold \
-            ${prefix}__local_seeding_mask.nii.gz \
-            --data_type uint8 -f
+        if [ $local_tracking_mask_threshold ]
+        then
+            scil_volume_math.py lower_threshold $tracking_mask \
+                $local_tracking_mask_threshold \
+                ${prefix}__local_tracking_mask.nii.gz \
+                --data_type uint8 -f
+        else
+            scil_volume_math.py convert $tracking_mask ${prefix}__local_tracking_mask.nii.gz \
+                --data_type uint8 -f
+        fi
     fi
 
     $cmd $fodf ${prefix}__local_seeding_mask.nii.gz \

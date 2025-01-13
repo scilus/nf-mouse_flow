@@ -45,7 +45,12 @@ process MOUSE_REGISTRATION {
     max_param=\$(echo \$min_res '*' \$max_dim | bc)
     step_param=\$(echo \$min_res '/' 2 | bc -l | awk '{printf "%f", \$0}')
 
+    echo "Max param: \$max_param"
+    echo "Min res: \$min_res"
+    echo "Step_param res: \$step_param"
+
     params_iterations=\$(ants_generate_iterations.py --min \$min_res --max \$max_param --step \$step_param | tr -d '\\')
+    echo "Params iteration: \n \$params_iterations \n\n"
 
     # Which atlas resolution is closest to the input resolution
     if [[ -z "$atlas_resolution" ]]; then
@@ -73,27 +78,26 @@ process MOUSE_REGISTRATION {
     AMBA_LR=$atlas_directory/\${atlas_resolution}_AMBA_LR.nii.gz
     AMBA_ToM=$atlas_directory/\${atlas_resolution}_AMBA_ToM.nii.gz
 
-
 	ImageMath  3 ${prefix}__b0_lp.nii.gz  Laplacian ${prefix}__b0.nii.gz $laplacian_value
 	ImageMath  3 ${prefix}__fa_lp.nii.gz  Laplacian ${prefix}__fa.nii.gz $laplacian_value
 	ImageMath  3 AMBA_ref_lp.nii.gz  Laplacian \$AMBA_ref $laplacian_value
 	ImageMath  3 AMBA_inv_lp.nii.gz  Laplacian \$AMBA_inv $laplacian_value
 
-	antsRegistration --verbose 1 --dimensionality 3 --float 0 \
-        --collapse-output-transforms 1 \
-        --output [ ${prefix}__A_,${prefix}__A_Warped.nii.gz,${prefix}__A_InverseWarped.nii.gz ] \
-       	--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
-        --initial-moving-transform [${prefix}__b0.nii.gz,\$AMBA_ref,0] \
-       	--transform Rigid[ 0.1 ]  --metric MI[ ${prefix}__b0.nii.gz,\$AMBA_ref,1,32,Regular,0.25 ] \
-        \${params_iterations} \
-        --transform Affine[ 0.1 ] --metric MI[ ${prefix}__b0.nii.gz,\$AMBA_ref,1,32,Regular,0.25 ] \
-        \${params_iterations}
+    # Get Affine convergence
+    echo "Running SyN"
+    antsRegistrationSyN.sh -d 3 -f ${prefix}__b0.nii.gz -m \$AMBA_ref \
+        -f ${prefix}__fa.nii.gz -m \$AMBA_inv \
+        -f ${prefix}__b0_lp.nii.gz -m AMBA_ref_lp.nii.gz \
+        -f ${prefix}__fa_lp.nii.gz -m AMBA_inv_lp.nii.gz -i  [${prefix}__b0.nii.gz,\$AMBA_ref,0] -o test_ > log_synQuick.txt
+    log=\$(cat log_synQuick.txt | grep "convergence" | tail -n 1)
+    params_iterations_SyN=\$(echo "\$log" | grep -oP '(--convergence \\[ [^\\]]+\\] --shrink-factors [^ ]+ --smoothing-sigmas [^ ]+)(?=(?!.*--convergence))' | tail -1)
+    echo "Params iteration SyN: \n \$params_iterations_SyN \n\n"
 
     antsRegistration --verbose 1 --dimensionality 3 --float 0 \
         --collapse-output-transforms 1  \
         --output [ ${prefix}__S_,${prefix}__S_Warped.nii.gz,${prefix}__S_InverseWarped.nii.gz ]  \
       	--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
-        --initial-moving-transform ${prefix}__A_0GenericAffine.mat  \
+        --initial-moving-transform [${prefix}__b0.nii.gz,\$AMBA_ref,0] \
        	--transform Rigid[ 0.1 ] --metric MI[ ${prefix}__b0.nii.gz,\$AMBA_ref,1,32,Regular,0.25 ] \
         \${params_iterations} \
         --transform Affine[ 0.1 ] --metric MI[ ${prefix}__b0.nii.gz,\$AMBA_ref,1,32,Regular,0.25 ] \
@@ -101,9 +105,7 @@ process MOUSE_REGISTRATION {
         --transform SyN[ 0.1,3,0 ] \
         --metric CC[ ${prefix}__b0.nii.gz,\$AMBA_ref,1,4 ] --metric CC[ ${prefix}__fa.nii.gz,\$AMBA_inv,1,4 ] --metric CC[ ${prefix}__b0_lp.nii.gz,AMBA_ref_lp.nii.gz,1,4 ] \
         --metric CC[ ${prefix}__fa_lp.nii.gz,AMBA_inv_lp.nii.gz,1,4 ] \
-        --convergence [ 50x50x50x50x50x18x6x2x20,1e-6,10 ] \
-        --shrink-factors 6x6x6x5x4x3x2x1x1 \
-        --smoothing-sigmas 0.40625x0.35546875x0.3046875x0.25390625x0.203125x0.15234375x0.1015625x0.05078125x0.0mm
+        \${params_iterations_SyN}
 
 	antsApplyTransforms -d 3 -r ${prefix}__b0.nii.gz -i \$AMBA_ref -t ${prefix}__S_1Warp.nii.gz -t ${prefix}__S_0GenericAffine.mat -v -o ${prefix}__moving_check.nii.gz
 	antsApplyTransforms -d 3 -r ${prefix}__b0.nii.gz -i \$AMBA_LR -t ${prefix}__S_1Warp.nii.gz -t ${prefix}__S_0GenericAffine.mat -n NearestNeighbor -v -o ${prefix}__ANO_LR.nii.gz -u short

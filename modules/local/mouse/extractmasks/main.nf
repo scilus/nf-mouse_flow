@@ -9,6 +9,8 @@ process MOUSE_EXTRACTMASKS {
 
     output:
         tuple val(meta), path("*masks")  , emit: masks_dir
+        tuple val(meta), path("*__masks/*_MO_L.nii.gz"), path("*__masks/*_MO_R.nii.gz") , emit: masks_MO, optional: true
+        tuple val(meta), path("*__masks/*_SS_L.nii.gz"), path("*__masks/*_SS_R.nii.gz") , emit: masks_SS, optional: true
         path "versions.yml"                   , emit: versions
 
     when:
