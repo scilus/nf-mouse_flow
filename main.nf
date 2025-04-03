@@ -21,6 +21,8 @@ include { MOUSE_IMAGECOMBINE as COMBINE_MO} from './modules/local/mouse/imagecom
 include { MOUSE_IMAGECOMBINE as COMBINE_SS} from './modules/local/mouse/imagecombine/main.nf'
 include { MOUSE_TRACTOGRAMFILTER as FILTER_MO} from './modules/local/mouse/tractogramfilter/main.nf'
 include { MOUSE_TRACTOGRAMFILTER as FILTER_SS} from './modules/local/mouse/tractogramfilter/main.nf'
+include { MULTIQC } from "./modules/nf-core/multiqc/main"
+
 workflow get_data {
     main:
         if ( !params.input && !params.atlas ) {
@@ -50,11 +52,16 @@ workflow get_data {
             { it.parent.name }
             .map{ sid, bvals, bvecs, dwi -> [ [id: sid], dwi, bvals, bvecs ] } // Reordering the inputs.
     emit:
-        dwi = dwi_channel
+        dwi   = dwi_channel
         atlas = atlas_channel
 }
 
 workflow {
+
+    // Define channel for multiqc files
+    ch_multiqc_files = Channel.empty()
+    ch_multiqc_config = Channel.fromPath("$projectDir/assets/multiqc_config.yml", checkIfExists: true)
+
     // ** Now call your input workflow to fetch your files ** //
     data = get_data()
 
@@ -65,14 +72,13 @@ workflow {
             bval:   [meta, bval]
             bvec:   [meta, bvec]
         }
-    
+
     if (params.run_denoising){
         ch_mppca = ch_dwi_bvalbvec.dwi
             .map{ it + [[]] } // This add one empty list to the channel, since we do not have a mask.
         DENOISING_MPPCA( ch_mppca )
         ch_after_denoising = DENOISING_MPPCA.out.image
     }
-
     else {
         ch_after_denoising = ch_dwi_bvalbvec.dwi
     }
@@ -92,7 +98,7 @@ workflow {
 
     if (params.run_n4) {
         ch_N4 = ch_after_eddy
-            .map{ meta, dwi, bval, bvec ->
+            .map{ meta, dwi, _bval, _bvec ->
                     tuple(meta, dwi)}
             .join(MOUSE_BET.out.b0)
             .join(MOUSE_BET.out.mask)
@@ -118,6 +124,7 @@ workflow {
                                     .join(ch_after_eddy.map{ [it[0], it[2], it[3]] })
                                     .join(IMAGE_CONVERT.out.image)
     RECONST_DTIMETRICS(ch_for_reconst)
+    ch_multiqc_files = ch_multiqc_files.mix(RECONST_DTIMETRICS.out.mqc)
 
     RECONST_FRF(ch_for_reconst
                     .map{ it + [[], [], []]})
@@ -131,14 +138,13 @@ workflow {
 
     TRACKING_MASK(IMAGE_CONVERT.out.image
                     .join(MOUSE_REGISTRATION.out.ANO))
-    
-    TRACKING_LOCALTRACKING(RECONST_FODF.out.fodf
-                .join(TRACKING_MASK.out.tracking_mask)
-                .join(TRACKING_MASK.out.seeding_mask)
-                .map{ it + [[], []]})
-    
+
+    TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
+                .join(RECONST_FODF.out.fodf)
+                .join(TRACKING_MASK.out.seeding_mask))
+
     MOUSE_EXTRACTMASKS(MOUSE_REGISTRATION.out.ANO_LR)
-    
+
     ch_metrics = RECONST_DTIMETRICS.out.md
                     .join(RECONST_DTIMETRICS.out.fa)
                     .join(RECONST_DTIMETRICS.out.rd)
@@ -158,18 +164,26 @@ workflow {
     COMBINE_MO(MOUSE_EXTRACTMASKS.out.masks_MO)
     COMBINE_SS(MOUSE_EXTRACTMASKS.out.masks_SS)
 
-    TRACKING_MO(RECONST_FODF.out.fodf
-                 .map{it + [[], []]}
-                 .join(COMBINE_MO.out.mask_combined)
-                 .join(TRACKING_MASK.out.tracking_mask))
-
-    TRACKING_SS(RECONST_FODF.out.fodf
-                .map{it + [[], []]}
-                .join(COMBINE_SS.out.mask_combined)
+    TRACKING_MO(COMBINE_MO.out.mask_combined
+                .join(RECONST_FODF.out.fodf)
                 .join(TRACKING_MASK.out.tracking_mask))
-    
+
+    TRACKING_SS(COMBINE_SS.out.mask_combined
+                .join(RECONST_FODF.out.fodf)
+                .join(TRACKING_MASK.out.tracking_mask))
+
     FILTER_MO(TRACKING_MO.out.trk
         .join(MOUSE_EXTRACTMASKS.out.masks_MO))
     FILTER_SS(TRACKING_SS.out.trk
         .join(MOUSE_EXTRACTMASKS.out.masks_SS))
+
+    
+    ch_multiqc_files = ch_multiqc_files
+    .groupTuple()
+    .map { meta, files_list ->
+        def files = files_list.flatten().findAll { it != null }
+        return tuple(meta, files)
+    }
+
+    MULTIQC(ch_multiqc_files, [], ch_multiqc_config.toList(), [], [], [], [])
 }

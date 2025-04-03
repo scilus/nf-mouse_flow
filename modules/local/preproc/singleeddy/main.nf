@@ -1,10 +1,8 @@
 process PREPROC_SINGLEEDDY {
     tag "$meta.id"
-    label 'process_high'
+    label 'process_eddy'
 
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        "https://scil.usherbrooke.ca/containers/scilus_2.0.2.sif":
-        "scilus/scilus:2.0.2"}"
+    container "scilus/scilus:latest"
 
     input:
         tuple val(meta), path(dwi), path(bval), path(bvec)
@@ -36,9 +34,10 @@ process PREPROC_SINGLEEDDY {
         --encoding_direction $encoding\
         --readout $readout \
         --eddy_cmd $eddy_cmd\
+        --slice_drop_correction \
         --out_script -f
 
-    echo "--very_verbose $extra_args" >> eddy.sh
+    echo "--nthr=10 --very_verbose $extra_args" >> eddy.sh
 	sh eddy.sh
 	mv dwi_eddy_corrected.nii.gz ${prefix}__dwi_eddy_corrected.nii.gz
 	mv dwi_eddy_corrected.eddy_rotated_bvecs ${prefix}__dwi_eddy_corrected.bvec

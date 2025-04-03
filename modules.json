@@ -2,6 +2,17 @@
   "name": "",
   "homePage": "",
   "repos": {
+    "https://github.com/nf-core/modules.git": {
+      "modules": {
+        "nf-core": {
+          "multiqc": {
+            "branch": "master",
+            "git_sha": "7b50cb7be890e4b28cffb82e438cc6a8d7805d3f",
+            "installed_by": ["modules"]
+          }
+        }
+      }
+    },
     "https://github.com/scilus/nf-neuro.git": {
       "modules": {
         "nf-neuro": {
@@ -22,22 +33,22 @@
           },
           "reconst/dtimetrics": {
             "branch": "main",
-            "git_sha": "072538948dd406f6a88cdcf456dc3b132b66e5b6",
+            "git_sha": "452075a707a9769b0509fc33a1051e8ba80799bf",
             "installed_by": ["modules"]
           },
           "reconst/fodf": {
             "branch": "main",
-            "git_sha": "c2980ddb3d3d0be27b36f06282360728fbb63d42",
+            "git_sha": "452075a707a9769b0509fc33a1051e8ba80799bf",
             "installed_by": ["modules"]
           },
           "reconst/frf": {
             "branch": "main",
-            "git_sha": "0bf60b4365fa8e0605436114caf380dac9ee38b8",
+            "git_sha": "452075a707a9769b0509fc33a1051e8ba80799bf",
             "installed_by": ["modules"]
           },
           "tracking/localtracking": {
             "branch": "main",
-            "git_sha": "162124f316f48c93ca2c2649c756da382c73a806",
+            "git_sha": "b8f82569a1160bf13138b6278c0e22caf88c4e22",
             "installed_by": ["modules"]
           }
         }
