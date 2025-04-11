@@ -3,8 +3,12 @@ report_comment: >
   analysis pipeline.
 
 report_section_order:
+  registration_qc:
+    order: -600
   dti_qc:
-    order: -1001
+    order: -700
+  tracking_qc:
+    order: -800
 
 custom_data:
   dti_qc:
@@ -17,6 +21,30 @@ custom_data:
       matter tracts with expected high values (e.g., corpus callosum, corticospinal tract, etc.)...
     plot_type: "image"
 
+  registration_qc:
+    file_format: "gif"
+    section_name: "Registration QC"
+    description: |
+      This section contains QC images for the registration of the diffusion data to the
+      anatomical space. Add specifications regarding how to evaluate those images, for example:
+      To assess the quality of the registration, ensure that the diffusion data is well aligned
+      with the anatomical data and that there are no significant misalignments or distortions...
+    plot_type: "image"
+
+  tracking_qc:
+    file_format: "png"
+    section_name: "Tracking QC"
+    description: |
+      This section contains QC images for the tracking of the diffusion data. Add specifications
+      regarding how to evaluate those images, for example:
+      To assess the quality of the tracking, ensure that the streamlines are well-defined and
+      follow expected anatomical pathways without excessive crossing or noise...
+    plot_type: "image"
+
 sp:
   dti_qc:
     fn: "*dti_mqc.png"
+  registration_qc:
+    fn: "*registration_ants_mqc.gif"
+  tracking_qc:
+    fn: "*local_tracking_mqc.png"

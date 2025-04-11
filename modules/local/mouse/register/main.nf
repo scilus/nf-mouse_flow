@@ -14,7 +14,9 @@ process MOUSE_REGISTRATION {
         tuple val(meta), path("*__S_1Warp.nii.gz")          , emit: Warp
         tuple val(meta), path("*__ANO_LR.nii.gz")           , emit: ANO_LR
         tuple val(meta), path("*__ANO.nii.gz")              , emit: ANO
+        tuple val(meta), path("*__ToM.nii.gz")              , emit: TOM
         tuple val(meta), path("*__moving_check.nii.gz")     , emit: moving_check
+        tuple val(meta), path("*_registration_ants_mqc.gif"), emit: mqc
         path "versions.yml"                                 , emit: versions
 
     when:
@@ -24,8 +26,9 @@ process MOUSE_REGISTRATION {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def laplacian_value = task.ext.laplacian_value ? task.ext.laplacian_value : ""
     def atlas_resolution = task.ext.atlas_resolution ? task.ext.atlas_resolution : ""
-    def atlas_50_resolution = task.ext.atlas_50_resolution 
+    def atlas_50_resolution = task.ext.atlas_50_resolution
     def atlas_100_resolution = task.ext.atlas_100_resolution
+    def run_qc = task.ext.run_qc ?: false
 
     """
     export OMP_NUM_THREADS=$task.cpus
@@ -113,6 +116,55 @@ process MOUSE_REGISTRATION {
 	antsApplyTransforms -d 3 -r ${prefix}__b0.nii.gz -i \$AMBA_ToM -t ${prefix}__S_1Warp.nii.gz -t ${prefix}__S_0GenericAffine.mat -n NearestNeighbor -v -o ${prefix}__ToM.nii.gz -u short
 
     antsApplyTransforms -d 3 -r \$AMBA_ref -i ${prefix}__b0.nii.gz -t [${prefix}__S_0GenericAffine.mat, 1] -t ${prefix}__S_1InverseWarp.nii.gz -v -o ${prefix}__fixed_check.nii.gz
+
+
+
+    ### ** QC ** ###
+    if $run_qc;
+    then
+        extract_dim=\$(mrinfo ${prefix}__b0.nii.gz -size)
+        read sagittal_dim coronal_dim axial_dim <<< "\${extract_dim}"
+
+        # Get the middle slice
+        coronal_dim=\$((\$coronal_dim / 2))
+        axial_dim=\$((\$axial_dim / 2))
+        sagittal_dim=\$((\$sagittal_dim / 2))
+
+        # Set viz params.
+        viz_params="--display_slice_number --display_lr --size 256 256"
+        # Iterate over images.
+        for image in b0 ANO_LR ANO ToM;
+        do
+            scil_viz_volume_screenshot.py ${prefix}__\${image}.nii.gz \${image}_coronal.png \
+                --slices \$coronal_dim --axis coronal \$viz_params
+            scil_viz_volume_screenshot.py ${prefix}__\${image}.nii.gz \${image}_sagittal.png \
+                --slices \$sagittal_dim --axis sagittal \$viz_params
+            scil_viz_volume_screenshot.py ${prefix}__\${image}.nii.gz \${image}_axial.png \
+                --slices \$axial_dim --axis axial \$viz_params
+            if [ \$image != b0 ];
+            then
+                title="\${image} Warped"
+            else
+                title="Reference b0"
+            fi
+            convert +append \${image}_coronal*.png \${image}_axial*.png \
+                \${image}_sagittal*.png \${image}_mosaic.png
+            convert -annotate +20+230 "\${title}" -fill white -pointsize 30 \
+                \${image}_mosaic.png \${image}_mosaic.png
+            # Clean up.
+            rm \${image}_coronal*.png \${image}_sagittal*.png \${image}_axial*.png
+        done
+        # Create GIF.
+        for image in ANO_LR ANO ToM;
+        do
+            convert -delay 10 -loop 0 -morph 10 \
+                \${image}_mosaic.png b0_mosaic.png \${image}_mosaic.png \
+                ${prefix}_\${image}_registration_ants_mqc.gif
+        done
+        # Clean up.
+        rm *_mosaic.png
+    fi
+
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

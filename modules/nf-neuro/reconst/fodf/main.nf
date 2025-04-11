@@ -47,6 +47,7 @@ process RECONST_FODF {
     def fa_threshold = task.ext.fa_threshold ? "--fa_t " + task.ext.fa_threshold : ""
     def md_threshold = task.ext.md_threshold ? "--md_t " + task.ext.md_threshold : ""
     def absolute_peaks = task.ext.absolute_peaks ? "--abs_peaks_and_values" : ""
+    def run_qc = task.ext.run_qc ?: false
 
     /* if (set_method != "ssst_fodf" || set_method != "msmt_fodf") error "ERROR";*/
     if ( task.ext.wm_fodf ) wm_fodf = "--wm_out_fODF ${prefix}__wm_fodf.nii.gz" else wm_fodf = ""

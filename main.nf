@@ -119,6 +119,7 @@ workflow {
                                     .join(IMAGE_CONVERT.out.image)
                                     .combine(data.atlas)
     MOUSE_REGISTRATION(ch_for_mouse_registration)
+    ch_multiqc_files = ch_multiqc_files.mix(MOUSE_REGISTRATION.out.mqc)
 
     ch_for_reconst = RESAMPLE_DWI.out.image
                                     .join(ch_after_eddy.map{ [it[0], it[2], it[3]] })
@@ -142,6 +143,8 @@ workflow {
     TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
                 .join(RECONST_FODF.out.fodf)
                 .join(TRACKING_MASK.out.seeding_mask))
+    ch_multiqc_files = ch_multiqc_files.mix(TRACKING_LOCALTRACKING.out.mqc)
+
 
     MOUSE_EXTRACTMASKS(MOUSE_REGISTRATION.out.ANO_LR)
 
@@ -172,10 +175,10 @@ workflow {
                 .join(RECONST_FODF.out.fodf)
                 .join(TRACKING_MASK.out.tracking_mask))
 
-    FILTER_MO(TRACKING_MO.out.trk
-        .join(MOUSE_EXTRACTMASKS.out.masks_MO))
-    FILTER_SS(TRACKING_SS.out.trk
-        .join(MOUSE_EXTRACTMASKS.out.masks_SS))
+    //FILTER_MO(TRACKING_MO.out.trk
+    //    .join(MOUSE_EXTRACTMASKS.out.masks_MO))
+    //FILTER_SS(TRACKING_SS.out.trk
+    //    .join(MOUSE_EXTRACTMASKS.out.masks_SS))
 
     
     ch_multiqc_files = ch_multiqc_files
