@@ -48,7 +48,6 @@ process MOUSE_BET {
     def prefix = task.ext.prefix ?: "${meta.id}"
 
     """
-    fslmaths -h
     scil_dwi_prepare_eddy_command.py -h
     maskbackgroundnoise -h
 
