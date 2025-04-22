@@ -1,6 +1,6 @@
 process PREPROC_SINGLEEDDY {
     tag "$meta.id"
-    label 'process_eddy'
+    label 'process_high'
 
     container "scilus/scilus:latest"
 
@@ -22,6 +22,7 @@ process PREPROC_SINGLEEDDY {
     def eddy_cmd = task.ext.eddy_cmd ? task.ext.eddy_cmd : "eddy_cpu"
     def extra_args = task.ext.extra_args ?: ""
     def extra_ite = task.ext.extra_ite ?: ""
+    def extra_thr = task.ext.extra_thr ?: ""
 
     """
     export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=$task.cpus
@@ -39,7 +40,7 @@ process PREPROC_SINGLEEDDY {
         --slice_drop_correction \
         --out_script -f
 
-    echo "--nthr=10 --residuals --very_verbose $extra_args --niter=$extra_ite" >> eddy.sh
+    echo "--nthr=$extra_thr --very_verbose $extra_args --niter=$extra_ite" >> eddy.sh
 	sh eddy.sh
 	mv ${prefix}__.nii.gz ${prefix}__dwi_eddy_corrected.nii.gz
 	mv ${prefix}__.eddy_rotated_bvecs ${prefix}__dwi_eddy_corrected.bvec
