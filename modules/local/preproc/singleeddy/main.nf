@@ -21,7 +21,6 @@ process PREPROC_SINGLEEDDY {
     def encoding = task.ext.encoding ? task.ext.encoding : ""
     def eddy_cmd = task.ext.eddy_cmd ? task.ext.eddy_cmd : "eddy_cpu"
     def extra_args = task.ext.extra_args ?: ""
-    def extra_ite = task.ext.extra_ite ?: ""
 
     """
     export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=$task.cpus
@@ -38,7 +37,7 @@ process PREPROC_SINGLEEDDY {
         --slice_drop_correction \
         --out_script -f
 
-    echo "--nthr=10 --very_verbose $extra_args --niter=10" >> eddy.sh
+    echo "--nthr=10 --very_verbose $extra_args" >> eddy.sh
 	sh eddy.sh
 	mv dwi_eddy_corrected.nii.gz ${prefix}__dwi_eddy_corrected.nii.gz
 	mv dwi_eddy_corrected.eddy_rotated_bvecs ${prefix}__dwi_eddy_corrected.bvec
