@@ -21,7 +21,12 @@ process PRE_QC {
     """
     # Fetch strides.
     strides=\$(mrinfo $dwi -strides)
+    # TODO: vérifier si les strides sont correctes, j'avais écrit la ligne de commande qu'il fallait faire avec le chemin absolu si ça n'était pas égal à 1,2,3,4
+
     mrconvert $dwi -strides 1,2,3,4 ${prefix}_qc_dwi.nii.gz -force
+
+    # Voir si la carte `RGB est correcte, j'ai repris comme tu avais fait, il faudrait mettre à quoi elle ressemble et à quoi elle devrait ressembler. Si ce n'est pas \
+    # le cas, il faut utiliser la ligne scil_gradients_validate_correct.py pour corriger la carte RGB, peut-être ajouter la création de la FA et des evecs pour faciliter si besoin. 
 
     scil_dti_metrics.py ${prefix}_qc_dwi.nii.gz $bval $bvec --not_all --rgb ${prefix}_rgb.nii.gz
 
@@ -45,6 +50,10 @@ process PRE_QC {
 
     scil_viz_volume_screenshot.py ${prefix}_rgb.nii.gz ${prefix}__sag_mqc.png \
     --slices \$mid_slice_sagittal --axis sagittal \
+
+    #J'avais fait une ligne qui regardait l'isotropie des gradients et qui informait si ce n'était pas isotrope qu'à l'étape RESAMPLE_DWI ça allait rééchantilloner
+
+    #Ajouter l'énergie des gradients
 
     scil_viz_gradients_screenshot.py --in_gradient_scheme $bval $bvec \
         --out_basename ${prefix}_shell_mqc.png --res 600
