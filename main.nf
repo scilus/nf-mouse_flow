@@ -21,7 +21,8 @@ include { MOUSE_IMAGECOMBINE as COMBINE_MO} from './modules/local/mouse/imagecom
 include { MOUSE_IMAGECOMBINE as COMBINE_SS} from './modules/local/mouse/imagecombine/main.nf'
 include { MOUSE_TRACTOGRAMFILTER as FILTER_MO} from './modules/local/mouse/tractogramfilter/main.nf'
 include { MOUSE_TRACTOGRAMFILTER as FILTER_SS} from './modules/local/mouse/tractogramfilter/main.nf'
-include { MULTIQC } from "./modules/nf-core/multiqc/main"
+include { MULTIQC } from './modules/nf-core/multiqc/main.nf'
+include { PRE_QC } from './modules/local/mouse/preqc/main.nf'
 
 workflow get_data {
     main:
@@ -72,9 +73,20 @@ workflow {
             bval:   [meta, bval]
             bvec:   [meta, bvec]
         }
+    ch_qc = ch_dwi_bvalbvec.dwi
+        .join(ch_dwi_bvalbvec.bvs_files)
+    
+    if (params.run_preqc){
+        //ch_preqc = ch_dwi_bvalbvec
+        PRE_QC( ch_qc )
+        ch_after_preqc = PRE_QC.out.dwi
+    }
+    else {
+        ch_after_preqc = ch_dwi_bvalbvec.dwi
+    }
 
     if (params.run_denoising){
-        ch_mppca = ch_dwi_bvalbvec.dwi
+        ch_mppca = ch_after_preqc
             .map{ it + [[]] } // This add one empty list to the channel, since we do not have a mask.
         DENOISING_MPPCA( ch_mppca )
         ch_after_denoising = DENOISING_MPPCA.out.image
