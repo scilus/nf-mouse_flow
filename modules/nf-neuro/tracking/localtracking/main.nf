@@ -3,8 +3,8 @@ process TRACKING_LOCALTRACKING {
     label 'process_high_memory'
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://scil.usherbrooke.ca/containers/scilus_2.0.2.sif':
-        'scilus/scilus:2.0.2' }"
+        'https://scil.usherbrooke.ca/containers/scilus_latest.sif':
+        'scilus/scilus:latest' }"
 
     input:
     tuple val(meta), path(wm), path(fodf), path(fa)

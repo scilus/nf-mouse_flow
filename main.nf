@@ -8,19 +8,12 @@ include { IMAGE_RESAMPLE as RESAMPLE_MASK} from './modules/nf-neuro/image/resamp
 include { IMAGE_CONVERT } from './modules/nf-neuro/image/convert/main.nf'
 include { MOUSE_REGISTRATION } from './modules/local/mouse/register/main.nf'
 include { RECONST_DTIMETRICS } from './modules/nf-neuro/reconst/dtimetrics/main.nf'
-include { RECONST_FRF } from './modules/nf-neuro/reconst/frf/main.nf'
-include { RECONST_FODF } from './modules/nf-neuro/reconst/fodf/main.nf'
+include { RECONST_QBALL } from './modules/local/reconst/qball/main.nf'
 include { TRACKING_MASK } from './modules/local/tracking/mask/main.nf'
 include { TRACKING_LOCALTRACKING } from './modules/nf-neuro/tracking/localtracking/main.nf'
-include { TRACKING_LOCALTRACKING as TRACKING_MO } from './modules/nf-neuro/tracking/localtracking/main.nf'
-include { TRACKING_LOCALTRACKING as TRACKING_SS } from './modules/nf-neuro/tracking/localtracking/main.nf'
 include { MOUSE_EXTRACTMASKS } from './modules/local/mouse/extractmasks/main.nf'
 include { MOUSE_VOLUMEROISTATS } from './modules/local/mouse/volumeroistats/main.nf'
 include { MOUSE_COMBINESTATS } from './modules/local/mouse/combinestats/main.nf'
-include { MOUSE_IMAGECOMBINE as COMBINE_MO} from './modules/local/mouse/imagecombine/main.nf'
-include { MOUSE_IMAGECOMBINE as COMBINE_SS} from './modules/local/mouse/imagecombine/main.nf'
-include { MOUSE_TRACTOGRAMFILTER as FILTER_MO} from './modules/local/mouse/tractogramfilter/main.nf'
-include { MOUSE_TRACTOGRAMFILTER as FILTER_SS} from './modules/local/mouse/tractogramfilter/main.nf'
 include { MULTIQC } from "./modules/nf-core/multiqc/main"
 
 workflow get_data {
@@ -127,21 +120,13 @@ workflow {
     RECONST_DTIMETRICS(ch_for_reconst)
     ch_multiqc_files = ch_multiqc_files.mix(RECONST_DTIMETRICS.out.mqc)
 
-    RECONST_FRF(ch_for_reconst
-                    .map{ it + [[], [], []]})
-
-    ch_for_reconst_fodf = ch_for_reconst
-                            .join(RECONST_DTIMETRICS.out.fa)
-                            .join(RECONST_DTIMETRICS.out.md)
-                            .join(RECONST_FRF.out.frf)
-                            .map{ it + [[], []]}
-    RECONST_FODF(ch_for_reconst_fodf)
+    RECONST_QBALL(ch_for_reconst)
 
     TRACKING_MASK(IMAGE_CONVERT.out.image
                     .join(MOUSE_REGISTRATION.out.ANO))
 
     TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
-                .join(RECONST_FODF.out.fodf)
+                .join(RECONST_QBALL.out.qball)
                 .join(TRACKING_MASK.out.seeding_mask))
     ch_multiqc_files = ch_multiqc_files.mix(TRACKING_LOCALTRACKING.out.mqc)
 
@@ -164,23 +149,6 @@ workflow {
                 .collect()
     MOUSE_COMBINESTATS(all_stats)
 
-    COMBINE_MO(MOUSE_EXTRACTMASKS.out.masks_MO)
-    COMBINE_SS(MOUSE_EXTRACTMASKS.out.masks_SS)
-
-    TRACKING_MO(COMBINE_MO.out.mask_combined
-                .join(RECONST_FODF.out.fodf)
-                .join(TRACKING_MASK.out.tracking_mask))
-
-    TRACKING_SS(COMBINE_SS.out.mask_combined
-                .join(RECONST_FODF.out.fodf)
-                .join(TRACKING_MASK.out.tracking_mask))
-
-    //FILTER_MO(TRACKING_MO.out.trk
-    //    .join(MOUSE_EXTRACTMASKS.out.masks_MO))
-    //FILTER_SS(TRACKING_SS.out.trk
-    //    .join(MOUSE_EXTRACTMASKS.out.masks_SS))
-
-    
     ch_multiqc_files = ch_multiqc_files
     .groupTuple()
     .map { meta, files_list ->
