@@ -8,21 +8,29 @@ include { IMAGE_RESAMPLE as RESAMPLE_MASK} from './modules/nf-neuro/image/resamp
 include { IMAGE_CONVERT } from './modules/nf-neuro/image/convert/main.nf'
 include { MOUSE_REGISTRATION } from './modules/local/mouse/register/main.nf'
 include { RECONST_DTIMETRICS } from './modules/nf-neuro/reconst/dtimetrics/main.nf'
-include { RECONST_FRF } from './modules/nf-neuro/reconst/frf/main.nf'
-include { RECONST_FODF } from './modules/nf-neuro/reconst/fodf/main.nf'
+include { RECONST_QBALL } from './modules/local/reconst/qball/main.nf'
 include { TRACKING_MASK } from './modules/local/tracking/mask/main.nf'
 include { TRACKING_LOCALTRACKING } from './modules/nf-neuro/tracking/localtracking/main.nf'
-include { TRACKING_LOCALTRACKING as TRACKING_MO } from './modules/nf-neuro/tracking/localtracking/main.nf'
-include { TRACKING_LOCALTRACKING as TRACKING_SS } from './modules/nf-neuro/tracking/localtracking/main.nf'
 include { MOUSE_EXTRACTMASKS } from './modules/local/mouse/extractmasks/main.nf'
 include { MOUSE_VOLUMEROISTATS } from './modules/local/mouse/volumeroistats/main.nf'
 include { MOUSE_COMBINESTATS } from './modules/local/mouse/combinestats/main.nf'
-include { MOUSE_IMAGECOMBINE as COMBINE_MO} from './modules/local/mouse/imagecombine/main.nf'
-include { MOUSE_IMAGECOMBINE as COMBINE_SS} from './modules/local/mouse/imagecombine/main.nf'
-include { MOUSE_TRACTOGRAMFILTER as FILTER_MO} from './modules/local/mouse/tractogramfilter/main.nf'
-include { MOUSE_TRACTOGRAMFILTER as FILTER_SS} from './modules/local/mouse/tractogramfilter/main.nf'
+include { LABEL_COMBINE as CREATE_FX_INCLUDE } from './modules/local/labels/combine/main.nf'
+include { LABEL_COMBINE as CREATE_FX_EXCLUDE } from './modules/local/labels/combine/main.nf'
+include { LABEL_COMBINE as CREATE_CST_EXCLUDE } from './modules/local/labels/combine/main.nf'
+include { LABEL_COMBINE as CREATE_CST_INCLUDE } from './modules/local/labels/combine/main.nf'
+include { LABEL_COMBINE as CREATE_CC_INCLUDE } from './modules/local/labels/combine/main.nf'
+include { LABEL_COMBINE as CREATE_CC_EXCLUDE } from './modules/local/labels/combine/main.nf'
+include { LABEL_COMBINE as CREATE_AC_EXCLUDE } from './modules/local/labels/combine/main.nf'
+include { LABEL_COMBINE as CREATE_AC_INCLUDE } from './modules/local/labels/combine/main.nf'
+include { TRACKING_FILTERING as CREATE_CST } from './modules/local/tracking/filtering/main.nf'
+include { TRACKING_FILTERING as CREATE_FX } from './modules/local/tracking/filtering/main.nf'
+include { ROI_GETMIDSAGITTAL as GETMIDSAGITTAL_AC } from './modules/local/roi/getmidsagittal/main.nf'
+include { ROI_GETMIDSAGITTAL as GETMIDSAGITTAL_CC } from './modules/local/roi/getmidsagittal/main.nf'
+include { TRACKING_FILTERING as CREATE_AC } from './modules/local/tracking/filtering/main.nf'
+include { TRACKING_FILTERING as CREATE_CC } from './modules/local/tracking/filtering/main.nf'
 include { MULTIQC } from './modules/nf-core/multiqc/main.nf'
 include { PRE_QC } from './modules/local/mouse/preqc/main.nf'
+
 
 workflow get_data {
     main:
@@ -79,7 +87,14 @@ workflow {
     if (params.run_preqc){
         //ch_preqc = ch_dwi_bvalbvec
         PRE_QC( ch_qc )
-        ch_after_preqc = PRE_QC.out.dwi
+        ch_multiqc_files = ch_multiqc_files.mix(PRE_QC.out.rgb_mqc)
+        ch_multiqc_files = ch_multiqc_files.mix(PRE_QC.out.shells_mqc)
+        if (params.use_preqc) {
+            ch_after_preqc = PRE_QC.out.dwi
+        }
+        else {
+            ch_after_preqc = Channel.empty()
+        }
     }
     else {
         ch_after_preqc = ch_dwi_bvalbvec.dwi
@@ -92,7 +107,7 @@ workflow {
         ch_after_denoising = DENOISING_MPPCA.out.image
     }
     else {
-        ch_after_denoising = ch_dwi_bvalbvec.dwi
+        ch_after_denoising = ch_after_preqc
     }
 
     ch_eddy = ch_after_denoising.join(ch_dwi_bvalbvec.bvs_files)
@@ -121,7 +136,7 @@ workflow {
         ch_after_n4 = ch_after_eddy
                         .map{ meta, dwi, _bval, _bvec -> tuple(meta, dwi)}
     }
-
+    
     RESAMPLE_DWI(ch_after_n4.map{ it + [[]] })
     RESAMPLE_MASK(MOUSE_BET.out.mask.map{ it + [[]] })
     IMAGE_CONVERT(RESAMPLE_MASK.out.image)
@@ -139,65 +154,52 @@ workflow {
     RECONST_DTIMETRICS(ch_for_reconst)
     ch_multiqc_files = ch_multiqc_files.mix(RECONST_DTIMETRICS.out.mqc)
 
-    RECONST_FRF(ch_for_reconst
-                    .map{ it + [[], [], []]})
-
-    ch_for_reconst_fodf = ch_for_reconst
-                            .join(RECONST_DTIMETRICS.out.fa)
-                            .join(RECONST_DTIMETRICS.out.md)
-                            .join(RECONST_FRF.out.frf)
-                            .map{ it + [[], []]}
-    RECONST_FODF(ch_for_reconst_fodf)
+    RECONST_QBALL(ch_for_reconst)
 
     TRACKING_MASK(IMAGE_CONVERT.out.image
                     .join(MOUSE_REGISTRATION.out.ANO))
+    ch_multiqc_files = ch_multiqc_files.mix(TRACKING_MASK.out.mqc)
 
     TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
-                .join(RECONST_FODF.out.fodf)
+                .join(RECONST_QBALL.out.qball)
                 .join(TRACKING_MASK.out.seeding_mask))
     ch_multiqc_files = ch_multiqc_files.mix(TRACKING_LOCALTRACKING.out.mqc)
 
+    CREATE_FX_EXCLUDE(MOUSE_REGISTRATION.out.ANO)
+    CREATE_FX_INCLUDE(MOUSE_REGISTRATION.out.ANO)
+    CREATE_FX(TRACKING_LOCALTRACKING.out.trk
+                .join(CREATE_FX_INCLUDE.out.labels_combined)
+                .join(CREATE_FX_EXCLUDE.out.labels_combined))
+    ch_multiqc_files = ch_multiqc_files.mix(CREATE_FX.out.mqc)
 
-    MOUSE_EXTRACTMASKS(MOUSE_REGISTRATION.out.ANO_LR)
+    CREATE_CST_EXCLUDE(MOUSE_REGISTRATION.out.ANO)
+    CREATE_CST_INCLUDE(MOUSE_REGISTRATION.out.ANO)
+    CREATE_CST(TRACKING_LOCALTRACKING.out.trk
+                .join(CREATE_CST_INCLUDE.out.labels_combined)
+                .join(CREATE_CST_EXCLUDE.out.labels_combined))
+    ch_multiqc_files = ch_multiqc_files.mix(CREATE_CST.out.mqc)
 
-    ch_metrics = RECONST_DTIMETRICS.out.md
-                    .join(RECONST_DTIMETRICS.out.fa)
-                    .join(RECONST_DTIMETRICS.out.rd)
-                    .join(RECONST_DTIMETRICS.out.ad)
-                    .map{ meta, fa, md, ad, rd ->
-                    tuple(meta, [ fa, md, ad, rd ])}
+    CREATE_CC_EXCLUDE(MOUSE_REGISTRATION.out.ANO)
+    CREATE_CC_INCLUDE(MOUSE_REGISTRATION.out.ANO)
+    GETMIDSAGITTAL_CC(CREATE_CC_INCLUDE.out.labels_combined)
+    CREATE_CC(TRACKING_LOCALTRACKING.out.trk
+                .join(GETMIDSAGITTAL_CC.out.roi)
+                .join(CREATE_CC_EXCLUDE.out.labels_combined))
+    ch_multiqc_files = ch_multiqc_files.mix(CREATE_CC.out.mqc)
 
-    ch_for_stats = ch_metrics
-                    .combine(MOUSE_EXTRACTMASKS.out.masks_dir, by: 0)
-    MOUSE_VOLUMEROISTATS(ch_for_stats)
+    CREATE_AC_EXCLUDE(MOUSE_REGISTRATION.out.ANO)
+    CREATE_AC_INCLUDE(MOUSE_REGISTRATION.out.ANO)
+    GETMIDSAGITTAL_AC(CREATE_AC_INCLUDE.out.labels_combined)
+    CREATE_AC(TRACKING_LOCALTRACKING.out.trk
+                .join(GETMIDSAGITTAL_AC.out.roi)
+                .join(CREATE_AC_EXCLUDE.out.labels_combined))
+    ch_multiqc_files = ch_multiqc_files.mix(CREATE_AC.out.mqc)
 
-    all_stats = MOUSE_VOLUMEROISTATS.out.stats
-                .map{ _meta, json -> json}
-                .collect()
-    MOUSE_COMBINESTATS(all_stats)
-
-    COMBINE_MO(MOUSE_EXTRACTMASKS.out.masks_MO)
-    COMBINE_SS(MOUSE_EXTRACTMASKS.out.masks_SS)
-
-    TRACKING_MO(COMBINE_MO.out.mask_combined
-                .join(RECONST_FODF.out.fodf)
-                .join(TRACKING_MASK.out.tracking_mask))
-
-    TRACKING_SS(COMBINE_SS.out.mask_combined
-                .join(RECONST_FODF.out.fodf)
-                .join(TRACKING_MASK.out.tracking_mask))
-
-    //FILTER_MO(TRACKING_MO.out.trk
-    //    .join(MOUSE_EXTRACTMASKS.out.masks_MO))
-    //FILTER_SS(TRACKING_SS.out.trk
-    //    .join(MOUSE_EXTRACTMASKS.out.masks_SS))
-
-    
     ch_multiqc_files = ch_multiqc_files
-    .groupTuple()
-    .map { meta, files_list ->
-        def files = files_list.flatten().findAll { it != null }
-        return tuple(meta, files)
+        .groupTuple()
+        .map { meta, files_list ->
+            def files = files_list.flatten().findAll { it != null }
+            return tuple(meta, files)
     }
 
     MULTIQC(ch_multiqc_files, [], ch_multiqc_config.toList(), [], [], [], [])

@@ -9,7 +9,8 @@ process PRE_QC {
 
     output:
     tuple val(meta), path("*_qc_dwi.nii.gz")           , emit: dwi
-    tuple val(meta), path("*_mqc.png")                 , emit: mqcshell
+    tuple val(meta), path("*_rgb_mqc.png")             , emit: rgb_mqc
+    tuple val(meta), path("*_shells_mqc.png")          , emit: shells_mqc
     path "versions.yml"                                , emit: versions
 
     when:
@@ -21,42 +22,55 @@ process PRE_QC {
     """
     # Fetch strides.
     strides=\$(mrinfo $dwi -strides)
-    # TODO: vérifier si les strides sont correctes, j'avais écrit la ligne de commande qu'il fallait faire avec le chemin absolu si ça n'était pas égal à 1,2,3,4
-
-    mrconvert $dwi -strides 1,2,3,4 ${prefix}_qc_dwi.nii.gz -force
+    # Compare strides
+    if [ "\$strides" != "1,2,3,4" ]; then
+        echo "Strides are not 1,2,3,4, converting to 1,2,3,4"
+        echo "Strides are: \$strides"
+        mrconvert $dwi -strides 1,2,3,4 ${prefix}_qc_dwi.nii.gz -force
+    else
+        echo "Strides are already 1,2,3,4"
+        cp $dwi ${prefix}_qc_dwi.nii.gz
+    fi
 
     # Voir si la carte `RGB est correcte, j'ai repris comme tu avais fait, il faudrait mettre à quoi elle ressemble et à quoi elle devrait ressembler. Si ce n'est pas \
     # le cas, il faut utiliser la ligne scil_gradients_validate_correct.py pour corriger la carte RGB, peut-être ajouter la création de la FA et des evecs pour faciliter si besoin. 
 
     scil_dti_metrics.py ${prefix}_qc_dwi.nii.gz $bval $bvec --not_all --rgb ${prefix}_rgb.nii.gz
 
-    # Fetch middle axial slice.
+    # Fetch middle slices and screenshots RGB
     size=\$(mrinfo ${prefix}_rgb.nii.gz -size)
     mid_slice_axial=\$(echo \$size | awk '{print int((\$3 + 1) / 2)}')
-
-    scil_viz_volume_screenshot.py ${prefix}_rgb.nii.gz ${prefix}__ax_mqc.png \
-    --slices \$mid_slice_axial --axis axial \
-    
-    # Fetch middle coronal slice.
-    size=\$(mrinfo ${prefix}_rgb.nii.gz -size)
     mid_slice_coronal=\$(echo \$size | awk '{print int((\$2 + 1) / 2)}')
-
-    scil_viz_volume_screenshot.py ${prefix}_rgb.nii.gz ${prefix}__cor_mqc.png \
-    --slices \$mid_slice_coronal --axis coronal \
-
-    # Fetch middle sagittal slice.
-    size=\$(mrinfo ${prefix}_rgb.nii.gz -size)
     mid_slice_sagittal=\$(echo \$size | awk '{print int((\$1 + 1) / 2)}')
 
-    scil_viz_volume_screenshot.py ${prefix}_rgb.nii.gz ${prefix}__sag_mqc.png \
+    # Axial
+    scil_viz_volume_screenshot.py ${prefix}_rgb.nii.gz ${prefix}__ax.png \
+    --slices \$mid_slice_axial --axis axial \
+    # Coronal
+    scil_viz_volume_screenshot.py ${prefix}_rgb.nii.gz ${prefix}__cor.png \
+    --slices \$mid_slice_coronal --axis coronal \
+    # Sagittal
+    scil_viz_volume_screenshot.py ${prefix}_rgb.nii.gz ${prefix}__sag.png \
     --slices \$mid_slice_sagittal --axis sagittal \
 
-    #J'avais fait une ligne qui regardait l'isotropie des gradients et qui informait si ce n'était pas isotrope qu'à l'étape RESAMPLE_DWI ça allait rééchantilloner
+    convert +append ${prefix}__cor_slice_\${mid_slice_coronal}.png \
+        ${prefix}__ax_slice_\${mid_slice_axial}.png  \
+        ${prefix}__sag_slice_\${mid_slice_sagittal}.png \
+        ${prefix}_rgb_mqc.png
 
-    #Ajouter l'énergie des gradients
+    convert -annotate +20+230 "RGB" -fill white -pointsize 30 ${prefix}_rgb_mqc.png ${prefix}_rgb_mqc.png
 
+    rm -rf *_slice_*png
+
+    # Check vox isotropic
+    iso=\$(mrinfo ${prefix}_rgb.nii.gz -spacing)
+
+    # Gradient validation energy
+    scil_gradients_validate_sampling.py $bval $bvec --viz_and_save ./ -f
+
+    # Save Gradient scheme
     scil_viz_gradients_screenshot.py --in_gradient_scheme $bval $bvec \
-        --out_basename ${prefix}_shell_mqc.png --res 600
+        --out_basename ${prefix}__shells_mqc.png --res 600
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -74,10 +88,8 @@ process PRE_QC {
     scil_viz_volume_screenshot.py -h
     
     touch ${prefix}_dwi.nii.gz
-    touch ${prefix}_shell_mqc.png
-    touch ${prefix}__ax.png
-    touch ${prefix}__cor.png
-    touch ${prefix}__sag.png
+    touch ${prefix}_shells_mqc.png
+    touch ${prefix}_rgb_mqc.png
 
     scil_viz_gradients_screenshot.py -h
 

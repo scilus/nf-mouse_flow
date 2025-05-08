@@ -3,8 +3,8 @@ process TRACKING_LOCALTRACKING {
     label 'process_high_memory'
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://scil.usherbrooke.ca/containers/scilus_2.0.2.sif':
-        'scilus/scilus:2.0.2' }"
+        'https://scil.usherbrooke.ca/containers/scilus_latest.sif':
+        'scilus/scilus:latest' }"
 
     input:
     tuple val(meta), path(wm), path(fodf), path(fa)
@@ -75,12 +75,12 @@ process TRACKING_LOCALTRACKING {
             --data_type uint8 -f
     fi
 
-    scil_tracking_local.py $fodf ${prefix}__local_seeding_mask.nii.gz \
+    scil_tracking_local_dev.py $fodf ${prefix}__local_seeding_mask.nii.gz \
             ${prefix}__local_tracking_mask.nii.gz tmp.trk $enable_gpu\
             $local_algo $local_seeding $local_nbr_seeds\
             $local_random_seed $local_step $local_theta\
             $local_sfthres $local_min_len\
-            $local_max_len $compress $basis -f
+            $local_max_len $compress $basis --processes 10 -f
 
     scil_tractogram_remove_invalid.py tmp.trk\
             ${prefix}__local_tracking.trk\

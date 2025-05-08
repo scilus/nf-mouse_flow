@@ -9,9 +9,9 @@ process MOUSE_REGISTRATION {
 
 
     output:
-        tuple val(meta), path("*__S_0GenericAffine.mat")    , emit: GenericAffine
-        tuple val(meta), path("*__S_1InverseWarp.nii.gz")   , emit: InverseWarp
-        tuple val(meta), path("*__S_1Warp.nii.gz")          , emit: Warp
+        tuple val(meta), path("*__0GenericAffine.mat")    , emit: GenericAffine
+        tuple val(meta), path("*__1InverseWarp.nii.gz")   , emit: InverseWarp
+        tuple val(meta), path("*__1Warp.nii.gz")          , emit: Warp
         tuple val(meta), path("*__ANO_LR.nii.gz")           , emit: ANO_LR
         tuple val(meta), path("*__ANO.nii.gz")              , emit: ANO
         tuple val(meta), path("*__ToM.nii.gz")              , emit: TOM
@@ -37,6 +37,9 @@ process MOUSE_REGISTRATION {
 
 	scil_dti_metrics.py $dwi $bval $bvec --mask $mask --not_all --fa ${prefix}__fa.nii.gz -f
 	scil_dwi_extract_b0.py $dwi $bval $bvec ${prefix}__b0.nii.gz -f
+
+    # Apply mask to b0
+    fslmaths ${prefix}__b0.nii.gz -mul $mask ${prefix}__b0_masked.nii.gz
 
     # Get values to extract iterations
     extract_dim=\$(mrinfo ${prefix}__b0.nii.gz -size) 
@@ -76,46 +79,46 @@ process MOUSE_REGISTRATION {
     echo "Atlas resolution: \$atlas_resolution"
 
     AMBA_ref=$atlas_directory/\${atlas_resolution}_AMBA_ref.nii.gz
-    AMBA_inv=$atlas_directory/\${atlas_resolution}_AMBA_inv.nii.gz
+    AMBA_inv=$atlas_directory/\${atlas_resolution}_AMBA_inv_novent.nii.gz
     AMBA_ANO=$atlas_directory/\${atlas_resolution}_AMBA_ANO.nii.gz
     AMBA_LR=$atlas_directory/\${atlas_resolution}_AMBA_LR.nii.gz
     AMBA_ToM=$atlas_directory/\${atlas_resolution}_AMBA_ToM.nii.gz
 
-	ImageMath  3 ${prefix}__b0_lp.nii.gz  Laplacian ${prefix}__b0.nii.gz $laplacian_value
+	ImageMath  3 ${prefix}__b0_lp.nii.gz  Laplacian ${prefix}__b0_masked.nii.gz $laplacian_value
 	ImageMath  3 ${prefix}__fa_lp.nii.gz  Laplacian ${prefix}__fa.nii.gz $laplacian_value
 	ImageMath  3 AMBA_ref_lp.nii.gz  Laplacian \$AMBA_ref $laplacian_value
 	ImageMath  3 AMBA_inv_lp.nii.gz  Laplacian \$AMBA_inv $laplacian_value
 
     # Get Affine convergence
     echo "Running SyN"
-    antsRegistrationSyN.sh -d 3 -f ${prefix}__b0.nii.gz -m \$AMBA_ref \
+    antsRegistrationSyN.sh -d 3 -f ${prefix}__b0_masked.nii.gz -m \$AMBA_ref \
         -f ${prefix}__fa.nii.gz -m \$AMBA_inv \
         -f ${prefix}__b0_lp.nii.gz -m AMBA_ref_lp.nii.gz \
-        -f ${prefix}__fa_lp.nii.gz -m AMBA_inv_lp.nii.gz -i  [${prefix}__b0.nii.gz,\$AMBA_ref,0] -o test_ > log_synQuick.txt
+        -f ${prefix}__fa_lp.nii.gz -m AMBA_inv_lp.nii.gz -i  [${prefix}__b0_masked.nii.gz,\$AMBA_ref,0] -o test_ > log_synQuick.txt
     log=\$(cat log_synQuick.txt | grep "convergence" | tail -n 1)
     params_iterations_SyN=\$(echo "\$log" | grep -oP '(--convergence \\[ [^\\]]+\\] --shrink-factors [^ ]+ --smoothing-sigmas [^ ]+)(?=(?!.*--convergence))' | tail -1)
     echo "Params iteration SyN: \n \$params_iterations_SyN \n\n"
 
     antsRegistration --verbose 1 --dimensionality 3 --float 0 \
         --collapse-output-transforms 1  \
-        --output [ ${prefix}__S_,${prefix}__S_Warped.nii.gz,${prefix}__S_InverseWarped.nii.gz ]  \
+        --output [ ${prefix}__,${prefix}__Warped.nii.gz,${prefix}__InverseWarped.nii.gz ]  \
       	--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
-        --initial-moving-transform [${prefix}__b0.nii.gz,\$AMBA_ref,0] \
-       	--transform Rigid[ 0.1 ] --metric MI[ ${prefix}__b0.nii.gz,\$AMBA_ref,1,32,Regular,0.25 ] \
+        --initial-moving-transform [${prefix}__b0_masked.nii.gz,\$AMBA_ref,0] \
+       	--transform Rigid[ 0.1 ] --metric MI[ ${prefix}__b0_masked.nii.gz,\$AMBA_ref,1,32,Regular,0.25 ] \
         \${params_iterations} \
-        --transform Affine[ 0.1 ] --metric MI[ ${prefix}__b0.nii.gz,\$AMBA_ref,1,32,Regular,0.25 ] \
+        --transform Affine[ 0.1 ] --metric MI[ ${prefix}__b0_masked.nii.gz,\$AMBA_ref,1,32,Regular,0.25 ] \
         \${params_iterations} \
         --transform SyN[ 0.1,3,0 ] \
-        --metric CC[ ${prefix}__b0.nii.gz,\$AMBA_ref,1,4 ] --metric CC[ ${prefix}__fa.nii.gz,\$AMBA_inv,1,4 ] --metric CC[ ${prefix}__b0_lp.nii.gz,AMBA_ref_lp.nii.gz,1,4 ] \
+        --metric CC[ ${prefix}__b0_masked.nii.gz,\$AMBA_ref,1,4 ] --metric CC[ ${prefix}__fa.nii.gz,\$AMBA_inv,1,4 ] --metric CC[ ${prefix}__b0_lp.nii.gz,AMBA_ref_lp.nii.gz,1,4 ] \
         --metric CC[ ${prefix}__fa_lp.nii.gz,AMBA_inv_lp.nii.gz,1,4 ] \
         \${params_iterations_SyN}
 
-	antsApplyTransforms -d 3 -r ${prefix}__b0.nii.gz -i \$AMBA_ref -t ${prefix}__S_1Warp.nii.gz -t ${prefix}__S_0GenericAffine.mat -v -o ${prefix}__moving_check.nii.gz
-	antsApplyTransforms -d 3 -r ${prefix}__b0.nii.gz -i \$AMBA_LR -t ${prefix}__S_1Warp.nii.gz -t ${prefix}__S_0GenericAffine.mat -n NearestNeighbor -v -o ${prefix}__ANO_LR.nii.gz -u short
-	antsApplyTransforms -d 3 -r ${prefix}__b0.nii.gz -i \$AMBA_ANO -t ${prefix}__S_1Warp.nii.gz -t ${prefix}__S_0GenericAffine.mat -n NearestNeighbor -v -o ${prefix}__ANO.nii.gz -u short
-	antsApplyTransforms -d 3 -r ${prefix}__b0.nii.gz -i \$AMBA_ToM -t ${prefix}__S_1Warp.nii.gz -t ${prefix}__S_0GenericAffine.mat -n NearestNeighbor -v -o ${prefix}__ToM.nii.gz -u short
+	antsApplyTransforms -d 3 -r ${prefix}__b0_masked.nii.gz -i \$AMBA_ref -t ${prefix}__1Warp.nii.gz -t ${prefix}__0GenericAffine.mat -v -o ${prefix}__moving_check.nii.gz
+	antsApplyTransforms -d 3 -r ${prefix}__b0_masked.nii.gz -i \$AMBA_LR -t ${prefix}__1Warp.nii.gz -t ${prefix}__0GenericAffine.mat -n NearestNeighbor -v -o ${prefix}__ANO_LR.nii.gz -u short
+	antsApplyTransforms -d 3 -r ${prefix}__b0_masked.nii.gz -i \$AMBA_ANO -t ${prefix}__1Warp.nii.gz -t ${prefix}__0GenericAffine.mat -n NearestNeighbor -v -o ${prefix}__ANO.nii.gz -u short
+	antsApplyTransforms -d 3 -r ${prefix}__b0_masked.nii.gz -i \$AMBA_ToM -t ${prefix}__1Warp.nii.gz -t ${prefix}__0GenericAffine.mat -n NearestNeighbor -v -o ${prefix}__ToM.nii.gz -u short
 
-    antsApplyTransforms -d 3 -r \$AMBA_ref -i ${prefix}__b0.nii.gz -t [${prefix}__S_0GenericAffine.mat, 1] -t ${prefix}__S_1InverseWarp.nii.gz -v -o ${prefix}__fixed_check.nii.gz
+    antsApplyTransforms -d 3 -r \$AMBA_ref -i ${prefix}__b0_masked.nii.gz -t [${prefix}__0GenericAffine.mat, 1] -t ${prefix}__1InverseWarp.nii.gz -v -o ${prefix}__fixed_check.nii.gz
 
 
 
@@ -177,12 +180,13 @@ process MOUSE_REGISTRATION {
     def prefix = task.ext.prefix ?: "${meta.id}"
 
     """
+    fslmaths -h
     antsApplyTransforms -h
     N4BiasFieldCorrection -h
 
-    touch ${prefix}__S_0GenericAffine.mat
-    touch ${prefix}__S_1InverseWarp.nii.gz
-    touch ${prefix}__S_1Warp.nii.gz
+    touch ${prefix}__0GenericAffine.mat
+    touch ${prefix}__1InverseWarp.nii.gz
+    touch ${prefix}__1Warp.nii.gz
     touch ${prefix}__ANO_LR.nii.gz
     touch ${prefix}__ANO.nii.gz
     touch ${prefix}__moving_check.nii.gz
