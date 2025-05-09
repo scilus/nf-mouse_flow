@@ -170,14 +170,14 @@ workflow {
     CREATE_FX(TRACKING_LOCALTRACKING.out.trk
                 .join(CREATE_FX_INCLUDE.out.labels_combined)
                 .join(CREATE_FX_EXCLUDE.out.labels_combined))
-    ch_multiqc_files = ch_multiqc_files.mix(CREATE_FX.out.mqc)
+    //ch_multiqc_files = ch_multiqc_files.mix(CREATE_FX.out.mqc)
 
     CREATE_CST_EXCLUDE(MOUSE_REGISTRATION.out.ANO)
     CREATE_CST_INCLUDE(MOUSE_REGISTRATION.out.ANO)
     CREATE_CST(TRACKING_LOCALTRACKING.out.trk
                 .join(CREATE_CST_INCLUDE.out.labels_combined)
                 .join(CREATE_CST_EXCLUDE.out.labels_combined))
-    ch_multiqc_files = ch_multiqc_files.mix(CREATE_CST.out.mqc)
+    //ch_multiqc_files = ch_multiqc_files.mix(CREATE_CST.out.mqc)
 
     CREATE_CC_EXCLUDE(MOUSE_REGISTRATION.out.ANO)
     CREATE_CC_INCLUDE(MOUSE_REGISTRATION.out.ANO)
@@ -185,7 +185,7 @@ workflow {
     CREATE_CC(TRACKING_LOCALTRACKING.out.trk
                 .join(GETMIDSAGITTAL_CC.out.roi)
                 .join(CREATE_CC_EXCLUDE.out.labels_combined))
-    ch_multiqc_files = ch_multiqc_files.mix(CREATE_CC.out.mqc)
+    //ch_multiqc_files = ch_multiqc_files.mix(CREATE_CC.out.mqc)
 
     CREATE_AC_EXCLUDE(MOUSE_REGISTRATION.out.ANO)
     CREATE_AC_INCLUDE(MOUSE_REGISTRATION.out.ANO)
@@ -193,7 +193,7 @@ workflow {
     CREATE_AC(TRACKING_LOCALTRACKING.out.trk
                 .join(GETMIDSAGITTAL_AC.out.roi)
                 .join(CREATE_AC_EXCLUDE.out.labels_combined))
-    ch_multiqc_files = ch_multiqc_files.mix(CREATE_AC.out.mqc)
+    // ch_multiqc_files = ch_multiqc_files.mix(CREATE_AC.out.mqc)
 
     ch_multiqc_files = ch_multiqc_files
         .groupTuple()
