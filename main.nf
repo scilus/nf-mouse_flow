@@ -8,6 +8,7 @@ include { IMAGE_RESAMPLE as RESAMPLE_MASK} from './modules/nf-neuro/image/resamp
 include { IMAGE_CONVERT } from './modules/nf-neuro/image/convert/main.nf'
 include { MOUSE_REGISTRATION } from './modules/local/mouse/register/main.nf'
 include { RECONST_DTIMETRICS } from './modules/nf-neuro/reconst/dtimetrics/main.nf'
+include { RECONST_DKIMETRICS } from './modules/nf-neuro/reconst/dkimetrics/main.nf'
 include { RECONST_FRF } from './modules/nf-neuro/reconst/frf/main.nf'
 include { RECONST_FODF } from './modules/nf-neuro/reconst/fodf/main.nf'
 include { TRACKING_MASK } from './modules/local/tracking/mask/main.nf'
@@ -126,6 +127,9 @@ workflow {
                                     .join(IMAGE_CONVERT.out.image)
     RECONST_DTIMETRICS(ch_for_reconst)
     ch_multiqc_files = ch_multiqc_files.mix(RECONST_DTIMETRICS.out.mqc)
+
+    RECONST_DKIMETRICS(ch_for_reconst)
+    ch_multiqc_files = ch_multiqc_files.mix(RECONST_DKIMETRICS.out.mqc)
 
     RECONST_FRF(ch_for_reconst
                     .map{ it + [[], [], []]})
