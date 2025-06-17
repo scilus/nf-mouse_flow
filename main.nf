@@ -12,9 +12,9 @@ include { RECONST_DKIMETRICS } from './modules/nf-neuro/reconst/dkimetrics/main.
 include { RECONST_FRF } from './modules/nf-neuro/reconst/frf/main.nf'
 include { RECONST_FODF } from './modules/nf-neuro/reconst/fodf/main.nf'
 include { TRACKING_MASK } from './modules/local/tracking/mask/main.nf'
-include { TRACKING_LOCALTRACKING } from './modules/nf-neuro/tracking/localtracking/main.nf'
 include { TRACKING_LOCALTRACKING as TRACKING_MO } from './modules/nf-neuro/tracking/localtracking/main.nf'
 include { TRACKING_LOCALTRACKING as TRACKING_SS } from './modules/nf-neuro/tracking/localtracking/main.nf'
+include { TRACKING_LOCALTRACKING } from './modules/nf-neuro/tracking/localtracking/main.nf'
 include { MOUSE_EXTRACTMASKS } from './modules/local/mouse/extractmasks/main.nf'
 include { MOUSE_VOLUMEROISTATS } from './modules/local/mouse/volumeroistats/main.nf'
 include { MOUSE_COMBINESTATS } from './modules/local/mouse/combinestats/main.nf'
@@ -146,6 +146,7 @@ workflow {
 
     TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
                 .join(RECONST_FODF.out.fodf)
+                .join(RECONST_QBALL.out.qball)
                 .join(TRACKING_MASK.out.seeding_mask))
     ch_multiqc_files = ch_multiqc_files.mix(TRACKING_LOCALTRACKING.out.mqc)
 
@@ -184,7 +185,7 @@ workflow {
     //FILTER_SS(TRACKING_SS.out.trk
     //    .join(MOUSE_EXTRACTMASKS.out.masks_SS))
 
-    
+
     ch_multiqc_files = ch_multiqc_files
     .groupTuple()
     .map { meta, files_list ->
