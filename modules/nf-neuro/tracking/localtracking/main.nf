@@ -76,10 +76,10 @@ process TRACKING_LOCALTRACKING {
     fi
 
     scil_tracking_local.py $fodf ${prefix}__local_seeding_mask.nii.gz \
-            ${prefix}__local_tracking_mask.nii.gz tmp.trk $enable_gpu\
-            $local_algo $local_seeding $local_nbr_seeds\
-            $local_random_seed $local_step $local_theta\
-            $local_sfthres $local_min_len\
+            ${prefix}__local_tracking_mask.nii.gz tmp.trk $enable_gpu \
+            $local_algo $local_seeding $local_nbr_seeds \
+            $local_random_seed $local_step $local_theta \
+            $local_sfthres $local_min_len \
             $local_max_len $compress $basis -f
 
     scil_tractogram_remove_invalid.py tmp.trk\
