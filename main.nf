@@ -15,6 +15,7 @@ include { TRACKING_MASK } from './modules/local/tracking/mask/main.nf'
 include { TRACKING_LOCALTRACKING as TRACKING_MO } from './modules/nf-neuro/tracking/localtracking/main.nf'
 include { TRACKING_LOCALTRACKING as TRACKING_SS } from './modules/nf-neuro/tracking/localtracking/main.nf'
 include { TRACKING_LOCALTRACKING } from './modules/nf-neuro/tracking/localtracking/main.nf'
+include { RECONST_QBALL } from './modules/local/reconst/qball/main.nf'
 include { MOUSE_EXTRACTMASKS } from './modules/local/mouse/extractmasks/main.nf'
 include { MOUSE_VOLUMEROISTATS } from './modules/local/mouse/volumeroistats/main.nf'
 include { MOUSE_COMBINESTATS } from './modules/local/mouse/combinestats/main.nf'
@@ -128,8 +129,10 @@ workflow {
     RECONST_DTIMETRICS(ch_for_reconst)
     ch_multiqc_files = ch_multiqc_files.mix(RECONST_DTIMETRICS.out.mqc)
 
-    RECONST_DKIMETRICS(ch_for_reconst)
-    ch_multiqc_files = ch_multiqc_files.mix(RECONST_DKIMETRICS.out.mqc)
+    if (params.run_dki){
+        ch_multiqc_files.mix(RECONST_DKIMETRICS.out.mqc) // This add one empty list to the channel, since we do not have a mask.
+        RECONST_DKIMETRICS( ch_for_reconst )
+    }
 
     RECONST_FRF(ch_for_reconst
                     .map{ it + [[], [], []]})
@@ -141,11 +144,13 @@ workflow {
                             .map{ it + [[], []]}
     RECONST_FODF(ch_for_reconst_fodf)
 
+    RECONST_QBALL(ch_for_reconst)
+    
     TRACKING_MASK(IMAGE_CONVERT.out.image
                     .join(MOUSE_REGISTRATION.out.ANO))
 
     TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
-                .join(RECONST_FODF.out.fodf)
+                // .join(RECONST_FODF.out.fodf)
                 .join(RECONST_QBALL.out.qball)
                 .join(TRACKING_MASK.out.seeding_mask))
     ch_multiqc_files = ch_multiqc_files.mix(TRACKING_LOCALTRACKING.out.mqc)
