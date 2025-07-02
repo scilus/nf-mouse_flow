@@ -3,14 +3,43 @@ report_comment: >
   analysis pipeline.
 
 report_section_order:
+  pre_qc_rgb:
+    order: -300
+  pre_qc_shells:
+    order: -400    
   registration_qc:
     order: -600
   dti_qc:
     order: -700
-  tracking_qc:
+  mask_tracking_qc:
     order: -800
+  tracking_qc:
+    order: -900
+  ac_filtering_qc:
+    order: -1000
+  cc_filtering_qc:
+    order: -1100
+  cst_filtering_qc:
+    order: -1200
+  fx_filtering_qc:
+    order: -1300
 
 custom_data:
+  pre_qc_rgb:
+    file_format: "png"
+    section_name: "RGB PRE QC"
+    description: |
+      This section contains RGB images from diffusion tensor imaging (DTI). 
+      To assess the orientation of the quality of the data, make sure the CC is in red corresponding to a left/right connection.
+    plot_type: "image"
+
+  pre_qc_shells:
+    file_format: "png"
+    section_name: "Shells PRE QC"
+    description: |
+      This section contains a sphere image showing the distribution of the gradients. 
+    plot_type: "image"
+
   dti_qc:
     file_format: "png"
     section_name: "DTI QC"
@@ -31,6 +60,13 @@ custom_data:
       with the anatomical data and that there are no significant misalignments or distortions...
     plot_type: "image"
 
+  mask_tracking_qc:
+    file_format: "png"
+    section_name: "Mask Tracking QC"
+    description: |
+      This section contains QC seeding and tracking images the diffusion data. 
+    plot_type: "image"
+
   tracking_qc:
     file_format: "png"
     section_name: "Tracking QC"
@@ -41,10 +77,52 @@ custom_data:
       follow expected anatomical pathways without excessive crossing or noise...
     plot_type: "image"
 
+  ac_filtering_qc:
+    file_format: "png"
+    section_name: "AC Filtering"
+    description: |
+      This section contains QC images for the filtering of the AC bundle.
+    plot_type: "image"
+
+  cc_filtering_qc:
+    file_format: "png"
+    section_name: "CC Filtering"
+    description: |
+      This section contains QC images for the filtering of the CC bundle.
+    plot_type: "image"
+
+  cst_filtering_qc:
+    file_format: "png"
+    section_name: "CST Filtering"
+    description: |
+      This section contains QC images for the filtering of the CST bundle.
+    plot_type: "image"
+
+  fx_filtering_qc:
+    file_format: "png"
+    section_name: "FX Filtering"
+    description: |
+      This section contains QC images for the filtering of the FX bundle.
+    plot_type: "image"
+
 sp:
+  pre_qc_rgb:
+    fn: "*__rgb_mqc.png"
+  pre_qc_shells:
+    fn: "*_shells_mqc.png"
   dti_qc:
     fn: "*dti_mqc.png"
   registration_qc:
     fn: "*registration_ants_mqc.gif"
+  mask_tracking_qc:
+    fn: "*_mask_tracking_mqc.png"
   tracking_qc:
     fn: "*local_tracking_mqc.png"
+  ac_filtering_qc:
+    fn: "*AC_tracking_mqc.png"
+  cc_filtering_qc:
+    fn: "*CC_tracking_mqc.png"
+  cst_filtering_qc:
+    fn: "*CST_tracking_mqc.png"
+  fx_filtering_qc:
+    fn: "*FX_tracking_mqc.png"

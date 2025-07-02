@@ -2,7 +2,9 @@ process MOUSE_REGISTRATION {
     tag "$meta.id"
     label 'process_high'
 
-    container "scilus/mouse-flow:dev"
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif':
+        'scilus/scilus:2.1.0'}"
 
     input:
         tuple val(meta), path(dwi), path(bval), path(bvec), path(mask), path(atlas_directory)
@@ -79,7 +81,7 @@ process MOUSE_REGISTRATION {
     echo "Atlas resolution: \$atlas_resolution"
 
     AMBA_ref=$atlas_directory/\${atlas_resolution}_AMBA_ref.nii.gz
-    AMBA_inv=$atlas_directory/\${atlas_resolution}_AMBA_inv.nii.gz
+    AMBA_inv=$atlas_directory/\${atlas_resolution}_AMBA_inv_novent.nii.gz
     AMBA_ANO=$atlas_directory/\${atlas_resolution}_AMBA_ANO.nii.gz
     AMBA_LR=$atlas_directory/\${atlas_resolution}_AMBA_LR.nii.gz
     AMBA_ToM=$atlas_directory/\${atlas_resolution}_AMBA_ToM.nii.gz
@@ -119,8 +121,6 @@ process MOUSE_REGISTRATION {
 	antsApplyTransforms -d 3 -r ${prefix}__b0_masked.nii.gz -i \$AMBA_ToM -t ${prefix}__1Warp.nii.gz -t ${prefix}__0GenericAffine.mat -n NearestNeighbor -v -o ${prefix}__ToM.nii.gz -u short
 
     antsApplyTransforms -d 3 -r \$AMBA_ref -i ${prefix}__b0_masked.nii.gz -t [${prefix}__0GenericAffine.mat, 1] -t ${prefix}__1InverseWarp.nii.gz -v -o ${prefix}__fixed_check.nii.gz
-
-
 
     ### ** QC ** ###
     if $run_qc;
