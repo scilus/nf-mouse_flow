@@ -1,8 +1,16 @@
-![image](assets/logo_bg.png)
+![alt text](assets/logo_bg.png "MouseFlow")
 
-MouseFlow is an analysis pipeline inspired by Tractoflow [1], optimized for use on the ex-vivo mouse brain. It integrates rigorous quality control at each processing step, ensuring reliable, standardized, and reproducible analyses.
+MouseFlow pipeline is developed by the Sherbrooke Connectivity Imaging Lab (SCIL) and Neurofunctional Imaging Group (GIN-IMN) in order to process diffusion MRI dataset from the raw data to the tractography.
 
-:warning: This pipeline is still in development. :warning:
+Using on diffusion data MouseFlow is a nextflow pipeline based on [nf-neuro](https://github.com/scilus/nf-neuro).
 
-[1] Theaud, G. et al. (2020) TractoFlow: A robust, effcient and reproducible difusion MRI pipeline leveraging Nextflow & Singularity. NeuroImage 218:116889.
+It incorporates essential steps: denoising, corrections of some artefacts, registration to a template (Allen Mouse Brain Atlas), the DTI and QBall reconstructions, extraction of some metrics, until constructing a whole brain tractogram of the mouse brain and extracting some bundles. It is capable of adapting the resolution of the atlas according to the native data, for better anatomical alignment.
 
+### :warning: WARNING :warning:
+
+This pipeline is currently in development. We highly encourage everyone to give it a try and give us feedback and raise issues if any.
+
+### In development features (non exhaustive list)
+
+- BIDS compliant
+- Meta metric QC across mouses
