@@ -2,7 +2,9 @@ process PRE_QC {
     tag "$meta.id"
     label 'process_high'
 
-    container "scilus/mouse-flow:dev"
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif':
+        'scilus/scilus:2.1.0'}"
 
     input:
     tuple val(meta), path(dwi), path(bval), path(bvec)
@@ -24,7 +26,8 @@ process PRE_QC {
     strides=\$(mrinfo $dwi -strides)
     # Compare strides
     if [ "\$strides" != "1,2,3,4" ]; then
-        echo "Strides are not 1,2,3,4, converting to 1,2,3,4"
+        echo "Strides are not (1,2,3,4), converting to 1,2,3,4."
+        echo "Strides were: \$strides"
         echo "Strides are: \$strides"
         mrconvert $dwi -strides 1,2,3,4 ${prefix}_qc_dwi.nii.gz -force
     else

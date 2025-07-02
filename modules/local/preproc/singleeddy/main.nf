@@ -2,7 +2,9 @@ process PREPROC_SINGLEEDDY {
     tag "$meta.id"
     label 'process_high'
 
-    container "scilus/scilus:latest"
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif':
+        'scilus/scilus:2.1.0'}"
 
     input:
         tuple val(meta), path(dwi), path(bval), path(bvec)

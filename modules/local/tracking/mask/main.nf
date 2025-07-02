@@ -3,8 +3,8 @@ process TRACKING_MASK {
     label 'process_high'
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://scil.usherbrooke.ca/containers/scilus_latest.sif':
-        'scilus/scilus:latest' }"
+        'https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif':
+        'scilus/scilus:2.1.0'}"
 
     input:
         tuple val(meta), path(mask), path(ano)
