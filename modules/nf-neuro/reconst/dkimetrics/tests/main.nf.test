@@ -8,7 +8,7 @@ nextflow_process {
     tag "modules"
     tag "modules_nfcore"
     tag "reconst"
-    tag "reconst/dtimetrics"
+    tag "reconst/dkimetrics"
 
     tag "subworkflows"
     tag "subworkflows/load_test_data"
@@ -25,7 +25,7 @@ nextflow_process {
             }
         }
 
-    test("reconst - dtimetrics") {
+    test("reconst - dkimetrics") {
         when {
             process {
                 """
@@ -91,7 +91,7 @@ nextflow_process {
         }
     }
 
-    test("reconst - dtimetrics_with_b0mask") {
+    test("reconst - dkimetrics_with_b0mask") {
         config "./nextflow_light.config"
         when {
             process {
@@ -124,7 +124,7 @@ nextflow_process {
         }
     }
 
-    test("reconst - stub-run dtimetrics") {
+    test("reconst - stub-run dkimetrics") {
         options "-stub-run"
         when {
             process {
