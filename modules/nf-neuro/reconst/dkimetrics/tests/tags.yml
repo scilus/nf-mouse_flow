@@ -1,2 +1,2 @@
-reconst/dtimetrics:
-  - "modules/nf-neuro/reconst/dtimetrics/**"
+reconst/dkimetrics:
+  - "modules/nf-neuro/reconst/dkimetrics/**"
