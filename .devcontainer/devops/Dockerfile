@@ -1,4 +1,4 @@
-FROM scilus/scilus:2.0.2
+FROM scilus/scilus:2.1.0
 
 ARG NFTEST_VERSION
 ARG POETRY_VERSION

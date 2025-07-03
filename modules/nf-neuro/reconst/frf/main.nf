@@ -5,7 +5,7 @@ process RECONST_FRF {
     label 'process_single'
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://scil.usherbrooke.ca/containers/scilus_2.0.2.sif':
+        'https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif':
         'scilus/scilus:dev' }"
 
     input:
