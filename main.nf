@@ -9,7 +9,8 @@ include { IMAGE_CONVERT } from './modules/nf-neuro/image/convert/main.nf'
 include { MOUSE_REGISTRATION } from './modules/local/mouse/register/main.nf'
 include { RECONST_DTIMETRICS } from './modules/nf-neuro/reconst/dtimetrics/main.nf'
 include { RECONST_QBALL } from './modules/local/reconst/qball/main.nf'
-include { TRACKING_MASK } from './modules/local/tracking/mask/main.nf'
+include { RECONST_DKIMETRICS } from './modules/nf-neuro/reconst/dkimetrics/main.nf'
+include { RECONST_FRF } from './modules/nf-neuro/reconst/frf/main.nf'include { TRACKING_MASK } from './modules/local/tracking/mask/main.nf'
 include { TRACKING_LOCALTRACKING } from './modules/nf-neuro/tracking/localtracking/main.nf'
 include { MOUSE_EXTRACTMASKS } from './modules/local/mouse/extractmasks/main.nf'
 include { MOUSE_VOLUMEROISTATS } from './modules/local/mouse/volumeroistats/main.nf'
@@ -119,6 +120,21 @@ workflow {
                                     .join(IMAGE_CONVERT.out.image)
     RECONST_DTIMETRICS(ch_for_reconst)
     ch_multiqc_files = ch_multiqc_files.mix(RECONST_DTIMETRICS.out.mqc)
+
+    if (params.run_dki){
+        ch_multiqc_files.mix(RECONST_DKIMETRICS.out.mqc) // This add one empty list to the channel, since we do not have a mask.
+        RECONST_DKIMETRICS( ch_for_reconst )
+    }
+
+    RECONST_FRF(ch_for_reconst
+                    .map{ it + [[], [], []]})
+
+    ch_for_reconst_fodf = ch_for_reconst
+                            .join(RECONST_DTIMETRICS.out.fa)
+                            .join(RECONST_DTIMETRICS.out.md)
+                            .join(RECONST_FRF.out.frf)
+                            .map{ it + [[], []]}
+    RECONST_FODF(ch_for_reconst_fodf)
 
     RECONST_QBALL(ch_for_reconst)
 
