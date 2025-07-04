@@ -2,7 +2,9 @@ process MOUSE_VOLUMEROISTATS {
     tag "$meta.id"
     label 'process_high'
 
-    container "scilus/mouse-flow:dev"
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        "https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif":
+        "scilus/scilus:2.1.0"}"
 
     input:
         tuple val(meta), path(metrics_list), path(mask_directory)

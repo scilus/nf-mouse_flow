@@ -1,7 +1,9 @@
 process MOUSE_COMBINESTATS {
     label 'process_high'
 
-    container "scilus/mouse-flow:dev"
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif':
+        'scilus/scilus:2.1.0' }"
 
     input:
         path(stats_list)
