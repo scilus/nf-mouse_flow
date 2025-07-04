@@ -1,5 +1,4 @@
-FROM scilus/scilus:2.0.2
-
+FROM scilus/scilus:2.1.0
 ARG POETRY_VERSION
 
 ENV POETRY_VERSION=${POETRY_VERSION:-1.8.*}
