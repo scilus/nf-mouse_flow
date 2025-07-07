@@ -6,6 +6,7 @@
             "POETRY_VERSION": "1.8.*"
         }
     },
+    "containerUser" : "root",
     "forwardPorts": [3000],
     "initializeCommand": "bash .devcontainer/prototyping/initializeCommand.sh",
     "onCreateCommand": "bash .devcontainer/prototyping/onCreateCommand.sh",
@@ -19,7 +20,7 @@
         "ghcr.io/devcontainers/features/github-cli:1": {},
         "ghcr.io/devcontainers/features/docker-in-docker:2": {
             "dockerDashComposeVersion": "none",
-            "installDockerComposeSwitch": false
+            "installDockerComposeSwitch": "false"
         },
         "ghcr.io/devcontainers-extra/features/apt-get-packages:1": {},
         "ghcr.io/robsyme/features/nextflow:1": {},

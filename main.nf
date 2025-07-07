@@ -8,6 +8,8 @@ include { IMAGE_RESAMPLE as RESAMPLE_MASK} from './modules/nf-neuro/image/resamp
 include { IMAGE_CONVERT } from './modules/nf-neuro/image/convert/main.nf'
 include { MOUSE_REGISTRATION } from './modules/local/mouse/register/main.nf'
 include { RECONST_DTIMETRICS } from './modules/nf-neuro/reconst/dtimetrics/main.nf'
+include { RECONST_FRF } from './modules/nf-neuro/reconst/frf/main.nf'
+include { RECONST_FODF } from './modules/nf-neuro/reconst/fodf/main.nf'
 include { RECONST_QBALL } from './modules/local/reconst/qball/main.nf'
 include { TRACKING_MASK } from './modules/local/tracking/mask/main.nf'
 include { TRACKING_LOCALTRACKING } from './modules/nf-neuro/tracking/localtracking/main.nf'
@@ -128,16 +130,37 @@ workflow {
     ch_for_reconst = RESAMPLE_DWI.out.image
                                     .join(ch_after_eddy.map{ [it[0], it[2], it[3]] })
                                     .join(IMAGE_CONVERT.out.image)
+
+
+
     RECONST_DTIMETRICS(ch_for_reconst)
     ch_multiqc_files = ch_multiqc_files.mix(RECONST_DTIMETRICS.out.mqc)
 
-    RECONST_QBALL(ch_for_reconst)
+
+    if (params.use_fodf)
+    {
+        RECONST_FRF(ch_for_reconst
+                        .map{ it + [[], [], []]})
+
+        ch_for_reconst_fodf = ch_for_reconst
+                                .join(RECONST_DTIMETRICS.out.fa)
+                                .join(RECONST_DTIMETRICS.out.md)
+                                .join(RECONST_FRF.out.frf)
+                                .map{ it + [[], []]}
+        RECONST_FODF(ch_for_reconst_fodf)
+        reconst_sh = RECONST_FODF.out.fodf
+    }
+    else
+    {
+        RECONST_QBALL(ch_for_reconst)
+        reconst_sh = RECONST_QBALL.out.qball
+    }
 
     TRACKING_MASK(IMAGE_CONVERT.out.image
                     .join(MOUSE_REGISTRATION.out.ANO))
 
     TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
-                .join(RECONST_QBALL.out.qball)
+                .join(reconst_sh)
                 .join(TRACKING_MASK.out.seeding_mask))
     ch_multiqc_files = ch_multiqc_files.mix(TRACKING_LOCALTRACKING.out.mqc)
 
