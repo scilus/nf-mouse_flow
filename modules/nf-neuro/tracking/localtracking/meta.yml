@@ -22,11 +22,6 @@ input:
       description: Nifti image white matter mask.
       pattern: "*.{nii,nii.gz}"
 
-  - fodf:
-      type: file
-      description: Nifti image of spherical harmonic file (fodf)
-      pattern: "*.{nii,nii.gz}"
-
   - fa:
       type: file
       description: NIfti image binary mask for fa mask
