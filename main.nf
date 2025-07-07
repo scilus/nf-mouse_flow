@@ -120,6 +120,25 @@ workflow {
     RECONST_DTIMETRICS(ch_for_reconst)
     ch_multiqc_files = ch_multiqc_files.mix(RECONST_DTIMETRICS.out.mqc)
 
+    if (params.use_fodf)
+    {
+        RECONST_FRF(ch_for_reconst
+                        .map{ it + [[], [], []]})
+
+        ch_for_reconst_fodf = ch_for_reconst
+                                .join(RECONST_DTIMETRICS.out.fa)
+                                .join(RECONST_DTIMETRICS.out.md)
+                                .join(RECONST_FRF.out.frf)
+                                .map{ it + [[], []]}
+        RECONST_FODF(ch_for_reconst_fodf)
+        reconst_sh = RECONST_FODF.out.fodf
+    }
+    else
+    {
+        RECONST_QBALL(ch_for_reconst)
+        reconst_sh = RECONST_QBALL.out.qball
+    }
+    
     if (params.run_dki){
         ch_multiqc_files.mix(RECONST_DKIMETRICS.out.mqc) // This add one empty list to the channel, since we do not have a mask.
         RECONST_DKIMETRICS( ch_for_reconst )
