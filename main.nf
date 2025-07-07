@@ -156,11 +156,11 @@ workflow {
         reconst_sh = RECONST_QBALL.out.qball
     }
 
+
     if (params.run_dki){
         ch_multiqc_files.mix(RECONST_DKIMETRICS.out.mqc) // This add one empty list to the channel, since we do not have a mask.
         RECONST_DKIMETRICS( ch_for_reconst )
     }
-
 
     TRACKING_MASK(IMAGE_CONVERT.out.image
                     .join(MOUSE_REGISTRATION.out.ANO))
