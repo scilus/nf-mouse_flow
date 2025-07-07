@@ -158,8 +158,8 @@ workflow {
 
 
     if (params.run_dki){
-        ch_multiqc_files.mix(RECONST_DKIMETRICS.out.mqc) // This add one empty list to the channel, since we do not have a mask.
         RECONST_DKIMETRICS( ch_for_reconst )
+        ch_multiqc_files.mix(RECONST_DKIMETRICS.out.mqc) // This add one empty list to the channel, since we do not have a mask.
     }
 
     TRACKING_MASK(IMAGE_CONVERT.out.image
