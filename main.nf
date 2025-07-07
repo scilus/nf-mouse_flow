@@ -7,6 +7,7 @@ include { IMAGE_RESAMPLE as RESAMPLE_DWI} from './modules/nf-neuro/image/resampl
 include { IMAGE_RESAMPLE as RESAMPLE_MASK} from './modules/nf-neuro/image/resample/main.nf'
 include { IMAGE_CONVERT } from './modules/nf-neuro/image/convert/main.nf'
 include { MOUSE_REGISTRATION } from './modules/local/mouse/register/main.nf'
+include { RECONST_DKIMETRICS } from './modules/local/reconst/dkimetrics/main.nf'
 include { RECONST_DTIMETRICS } from './modules/nf-neuro/reconst/dtimetrics/main.nf'
 include { RECONST_FRF } from './modules/nf-neuro/reconst/frf/main.nf'
 include { RECONST_FODF } from './modules/nf-neuro/reconst/fodf/main.nf'
@@ -136,6 +137,10 @@ workflow {
     RECONST_DTIMETRICS(ch_for_reconst)
     ch_multiqc_files = ch_multiqc_files.mix(RECONST_DTIMETRICS.out.mqc)
 
+    if (params.run_dki){
+        RECONST_DKIMETRICS( ch_for_reconst )
+        ch_multiqc_files.mix(RECONST_DKIMETRICS.out.mqc) // This add one empty list to the channel, since we do not have a mask.
+    }
 
     if (params.use_fodf)
     {
