@@ -8,8 +8,10 @@ include { IMAGE_RESAMPLE as RESAMPLE_MASK} from './modules/nf-neuro/image/resamp
 include { IMAGE_CONVERT } from './modules/nf-neuro/image/convert/main.nf'
 include { MOUSE_REGISTRATION } from './modules/local/mouse/register/main.nf'
 include { RECONST_DTIMETRICS } from './modules/nf-neuro/reconst/dtimetrics/main.nf'
+include { RECONST_FRF } from './modules/nf-neuro/reconst/frf/main.nf'
+include { RECONST_FODF } from './modules/nf-neuro/reconst/fodf/main.nf'
 include { RECONST_QBALL } from './modules/local/reconst/qball/main.nf'
-include { RECONST_DKIMETRICS } from './modules/nf-neuro/reconst/dkimetrics/main.nf'
+include { TRACKING_MASK } from './modules/local/tracking/mask/main.nf'
 include { TRACKING_LOCALTRACKING } from './modules/nf-neuro/tracking/localtracking/main.nf'
 include { MOUSE_EXTRACTMASKS } from './modules/local/mouse/extractmasks/main.nf'
 include { MOUSE_VOLUMEROISTATS } from './modules/local/mouse/volumeroistats/main.nf'
@@ -44,9 +46,15 @@ workflow get_data {
         dwi_channel = Channel.fromFilePairs("$input/**/*dwi.{nii.gz,bval,bvec}", size: 3, flat: true)
             { it.parent.name }
             .map{ sid, bvals, bvecs, dwi -> [ [id: sid], dwi, bvals, bvecs ] } // Reordering the inputs.
+        
+        mask_channel = Channel.fromPath("$input/**/*mask.nii.gz")
+                        .map { mask_file -> def sid = mask_file.parent.name
+                        [[id: sid], mask_file] }
+
     emit:
         dwi   = dwi_channel
         atlas = atlas_channel
+        mask  = mask_channel
 }
 
 workflow {
@@ -77,7 +85,7 @@ workflow {
     }
 
     ch_eddy = ch_after_denoising.join(ch_dwi_bvalbvec.bvs_files)
-    if (params.run_eddy) {
+    if (params.run_eddy){
         PREPROC_SINGLEEDDY(ch_eddy)
         ch_after_eddy = PREPROC_SINGLEEDDY.out.dwi_corrected.join(
             PREPROC_SINGLEEDDY.out.bval_corrected).join(
@@ -86,8 +94,13 @@ workflow {
     else {
         ch_after_eddy = ch_eddy
     }
+    
+    ch_for_bet = ch_after_eddy.join(data.mask, by: 0, remainder: true)
+        .map { meta, dwi, bval, bvec, mask ->
+            [meta, dwi, bval, bvec, mask ?: []]}  // Use empty list if mask is null
 
-    MOUSE_BET(ch_after_eddy)
+    MOUSE_BET(ch_for_bet)
+
 
     if (params.run_n4) {
         ch_N4 = ch_after_eddy
@@ -100,11 +113,11 @@ workflow {
     }
     else {
         ch_after_n4 = ch_after_eddy
-                        .map{ meta, dwi, _bval, _bvec -> tuple(meta, dwi)}
+            .map{ meta, dwi, _bval, _bvec -> tuple(meta, dwi)}
     }
+    RESAMPLE_DWI(ch_after_n4.map{ meta, dwi -> [meta, dwi, []] }) // Add an empty list for the optional reference image
+    RESAMPLE_MASK(MOUSE_BET.out.mask.map{ meta, mask -> [meta, mask, []] })
 
-    RESAMPLE_DWI(ch_after_n4.map{ it + [[]] })
-    RESAMPLE_MASK(MOUSE_BET.out.mask.map{ it + [[]] })
     IMAGE_CONVERT(RESAMPLE_MASK.out.image)
     
     ch_for_mouse_registration = RESAMPLE_DWI.out.image
@@ -117,8 +130,12 @@ workflow {
     ch_for_reconst = RESAMPLE_DWI.out.image
                                     .join(ch_after_eddy.map{ [it[0], it[2], it[3]] })
                                     .join(IMAGE_CONVERT.out.image)
+
+
+
     RECONST_DTIMETRICS(ch_for_reconst)
     ch_multiqc_files = ch_multiqc_files.mix(RECONST_DTIMETRICS.out.mqc)
+
 
     if (params.use_fodf)
     {
@@ -138,19 +155,18 @@ workflow {
         RECONST_QBALL(ch_for_reconst)
         reconst_sh = RECONST_QBALL.out.qball
     }
-    
+
     if (params.run_dki){
         ch_multiqc_files.mix(RECONST_DKIMETRICS.out.mqc) // This add one empty list to the channel, since we do not have a mask.
         RECONST_DKIMETRICS( ch_for_reconst )
     }
 
-    RECONST_QBALL(ch_for_reconst)
 
     TRACKING_MASK(IMAGE_CONVERT.out.image
                     .join(MOUSE_REGISTRATION.out.ANO))
 
     TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
-                .join(RECONST_QBALL.out.qball)
+                .join(reconst_sh)
                 .join(TRACKING_MASK.out.seeding_mask))
     ch_multiqc_files = ch_multiqc_files.mix(TRACKING_LOCALTRACKING.out.mqc)
 
