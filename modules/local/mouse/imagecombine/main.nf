@@ -4,7 +4,7 @@ process MOUSE_IMAGECOMBINE {
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif':
-        'scilus/scilus:2.1.0'}"
+        'scilus/scilus:2.1.0' }"
 
     input:
         tuple val(meta), path(l_side), path(r_side)

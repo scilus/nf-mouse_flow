@@ -4,7 +4,7 @@ process MOUSE_TRACTOGRAMFILTER {
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif':
-        'scilus/scilus:2.1.0'}"
+        'scilus/scilus:2.1.0' }"
 
     input:
         tuple val(meta), path(trk), path(mask1), path(mask2)
