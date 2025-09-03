@@ -4,8 +4,8 @@ process RECONST_QBALL {
     label 'process_high'
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        "https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif":
-        "scilus/scilus:2.1.0"}"
+        'https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif':
+        'scilus/scilus:2.1.0' }"
 
     input:
         tuple val(meta), path(dwi), path(bval), path(bvec), path(mask)
@@ -25,7 +25,7 @@ process RECONST_QBALL {
     script:
     def prefix = task.ext.prefix ?: "${meta.id}"
 
-    def run_qball = task.ext.run_qball ? "--use_qball" : ""
+    def use_qball = task.ext.use_qball ? "--use_qball" : ""
     def dwi_shell_tolerance = task.ext.dwi_shell_tolerance ? "--tolerance " + task.ext.dwi_shell_tolerance : ""
     def min_fodf_shell_value = task.ext.min_fodf_shell_value ?: 100     /* Default value for min_fodf_shell_value */
     def b0_thr_extract_b0 = task.ext.b0_thr_extract_b0 ?: 10        /* Default value for b0_thr_extract_b0 */
@@ -54,7 +54,7 @@ process RECONST_QBALL {
 
     scil_qball_metrics.py dwi_fodf_shells.nii.gz bval_fodf_shells bvec_fodf_shells \
         --sh ${prefix}__qball.nii.gz \
-        $set_mask $sh_order $sh_basis  $run_qball $processes \
+        $set_mask $sh_order $sh_basis  $use_qball $processes \
         --not_all $peaks $peak_indices $gfa $nufo $a_power
 
     cat <<-END_VERSIONS > versions.yml

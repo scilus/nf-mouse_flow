@@ -3,8 +3,8 @@ process PREPROC_SINGLEEDDY {
     label 'process_high'
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        "https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif":
-        "scilus/scilus:2.1.0"}"
+        'https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif':
+        'scilus/scilus:2.1.0' }"
 
     input:
         tuple val(meta), path(dwi), path(bval), path(bvec)
@@ -24,7 +24,6 @@ process PREPROC_SINGLEEDDY {
     def eddy_cmd = task.ext.eddy_cmd ? task.ext.eddy_cmd : "eddy_cpu"
     def extra_args = task.ext.extra_args ?: ""
     def extra_ite = task.ext.extra_ite ?: ""
-    def extra_thr = task.ext.extra_thr ?: ""
 
     """
     export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=$task.cpus
@@ -42,7 +41,7 @@ process PREPROC_SINGLEEDDY {
         --slice_drop_correction \
         --out_script -f
 
-    echo "--nthr=$extra_thr --very_verbose $extra_args --niter=$extra_ite" >> eddy.sh
+    echo "--nthr=$task.cpus --very_verbose $extra_args --niter=$extra_ite" >> eddy.sh
 	sh eddy.sh
 	mv ${prefix}__.nii.gz ${prefix}__dwi_eddy_corrected.nii.gz
 	mv ${prefix}__.eddy_rotated_bvecs ${prefix}__dwi_eddy_corrected.bvec

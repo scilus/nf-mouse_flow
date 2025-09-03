@@ -3,8 +3,8 @@ process MOUSE_REGISTRATION {
     label 'process_high'
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        "https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif":
-        "scilus/scilus:2.1.0"}"
+        'https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif':
+        'scilus/scilus:2.1.0' }"
 
     input:
         tuple val(meta), path(dwi), path(bval), path(bvec), path(mask), path(atlas_directory)
@@ -81,7 +81,7 @@ process MOUSE_REGISTRATION {
     echo "Atlas resolution: \$atlas_resolution"
 
     AMBA_ref=$atlas_directory/\${atlas_resolution}_AMBA_ref.nii.gz
-    AMBA_inv=$atlas_directory/\${atlas_resolution}_AMBA_inv.nii.gz
+    AMBA_inv=$atlas_directory/\${atlas_resolution}_AMBA_inv_novent.nii.gz
     AMBA_ANO=$atlas_directory/\${atlas_resolution}_AMBA_ANO.nii.gz
     AMBA_LR=$atlas_directory/\${atlas_resolution}_AMBA_LR.nii.gz
     AMBA_ToM=$atlas_directory/\${atlas_resolution}_AMBA_ToM.nii.gz
