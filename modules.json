@@ -7,7 +7,7 @@
         "nf-core": {
           "multiqc": {
             "branch": "master",
-            "git_sha": "7b50cb7be890e4b28cffb82e438cc6a8d7805d3f",
+            "git_sha": "e10b76ca0c66213581bec2833e30d31f239dec0b",
             "installed_by": ["modules"]
           }
         }
@@ -18,37 +18,42 @@
         "nf-neuro": {
           "denoising/mppca": {
             "branch": "main",
-            "git_sha": "2e222d18c89e5547a6bf5c0c74673baeb63bcd52",
+            "git_sha": "1c7984a32135efc6547518cff5724312013bcd4f",
             "installed_by": ["modules"]
           },
           "image/convert": {
             "branch": "main",
-            "git_sha": "b610d377e095aa88ab73d1ceaa90e94162cea153",
+            "git_sha": "0d983f0f2bddd155cfb9ac3080747850157fd9c8",
             "installed_by": ["modules"]
           },
           "image/resample": {
             "branch": "main",
-            "git_sha": "36e010a236a0bd86334ab99b0cac4f7c4ff51532",
+            "git_sha": "a3fbaa40d649f221b099322105936afe09115c0c",
             "installed_by": ["modules"]
           },
           "reconst/dtimetrics": {
             "branch": "main",
-            "git_sha": "452075a707a9769b0509fc33a1051e8ba80799bf",
+            "git_sha": "722aa2298519cf851930d189a8c51e090a665c5f",
             "installed_by": ["modules"]
           },
           "reconst/fodf": {
             "branch": "main",
-            "git_sha": "452075a707a9769b0509fc33a1051e8ba80799bf",
+            "git_sha": "6243a8961471549d479d882b1cf3a7bd7106c527",
             "installed_by": ["modules"]
           },
           "reconst/frf": {
             "branch": "main",
-            "git_sha": "452075a707a9769b0509fc33a1051e8ba80799bf",
+            "git_sha": "f9676160a7d9e71ad072c39f32bcc7e7f1621d7a",
+            "installed_by": ["modules"]
+          },
+          "reconst/qball": {
+            "branch": "main",
+            "git_sha": "a4d4eb10c7aa9a1bf47ea5063beda18d49e0c94c",
             "installed_by": ["modules"]
           },
           "tracking/localtracking": {
             "branch": "main",
-            "git_sha": "b8f82569a1160bf13138b6278c0e22caf88c4e22",
+            "git_sha": "b21f41f92e1ee439300b7060fc0296b56c6511b9",
             "installed_by": ["modules"]
           }
         }

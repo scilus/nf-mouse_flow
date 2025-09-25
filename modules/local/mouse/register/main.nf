@@ -2,9 +2,7 @@ process MOUSE_REGISTRATION {
     tag "$meta.id"
     label 'process_high'
 
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        "https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif":
-        "scilus/scilus:2.1.0"}"
+    container "scilus/scilus:2.2.0"
 
     input:
         tuple val(meta), path(dwi), path(bval), path(bvec), path(mask), path(atlas_directory)
@@ -37,8 +35,8 @@ process MOUSE_REGISTRATION {
     export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=$task.cpus
     export OPENBLAS_NUM_THREADS=1
 
-	scil_dti_metrics.py $dwi $bval $bvec --mask $mask --not_all --fa ${prefix}__fa.nii.gz -f
-	scil_dwi_extract_b0.py $dwi $bval $bvec ${prefix}__b0.nii.gz -f
+	scil_dti_metrics $dwi $bval $bvec --mask $mask --not_all --fa ${prefix}__fa.nii.gz -f
+	scil_dwi_extract_b0 $dwi $bval $bvec ${prefix}__b0.nii.gz -f
 
     # Apply mask to b0
     fslmaths ${prefix}__b0.nii.gz -mul $mask ${prefix}__b0_masked.nii.gz
@@ -57,7 +55,7 @@ process MOUSE_REGISTRATION {
     echo "Min res: \$min_res"
     echo "Step_param res: \$step_param"
 
-    params_iterations=\$(ants_generate_iterations.py --min \$min_res --max \$max_param --step \$step_param | tr -d '\\')
+    params_iterations=\$(ants_generate_iterations --min \$min_res --max \$max_param --step \$step_param | tr -d '\\')
     echo "Params iteration: \n \$params_iterations \n\n"
 
     # Which atlas resolution is closest to the input resolution
@@ -138,11 +136,11 @@ process MOUSE_REGISTRATION {
         # Iterate over images.
         for image in b0 ANO_LR ANO ToM;
         do
-            scil_viz_volume_screenshot.py ${prefix}__\${image}.nii.gz \${image}_coronal.png \
+            scil_viz_volume_screenshot ${prefix}__\${image}.nii.gz \${image}_coronal.png \
                 --slices \$coronal_dim --axis coronal \$viz_params
-            scil_viz_volume_screenshot.py ${prefix}__\${image}.nii.gz \${image}_sagittal.png \
+            scil_viz_volume_screenshot ${prefix}__\${image}.nii.gz \${image}_sagittal.png \
                 --slices \$sagittal_dim --axis sagittal \$viz_params
-            scil_viz_volume_screenshot.py ${prefix}__\${image}.nii.gz \${image}_axial.png \
+            scil_viz_volume_screenshot ${prefix}__\${image}.nii.gz \${image}_axial.png \
                 --slices \$axial_dim --axis axial \$viz_params
             if [ \$image != b0 ];
             then

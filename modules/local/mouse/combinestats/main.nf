@@ -1,9 +1,7 @@
 process MOUSE_COMBINESTATS {
     label 'process_high'
 
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif':
-        'scilus/scilus:2.1.0' }"
+    container "scilus/scilpy:2.2.0_cpu"
 
     input:
         path(stats_list)
@@ -27,29 +25,28 @@ process MOUSE_COMBINESTATS {
         mv \$curr_stat stats/\${bname}
     done
 
-    scil_json_merge_entries.py stats/*json all_stats.json --keep_separate
+    scil_json_merge_entries stats/*json all_stats.json --keep_separate
 
     if $convert_to_xlsx; then
-        scil_json_convert_entries_to_xlsx.py all_stats.json all_stats.xlsx
+        scil_json_convert_entries_to_xlsx all_stats.json all_stats.xlsx
     fi
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        scilpy: \$(pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
+        scilpy: \$(uv pip -q -n list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
     END_VERSIONS
     """
 
     stub:
     """
-    scil_json_merge_entries.py -h
-    scil_json_convert_entries_to_xlsx.py -h
+    scil_json_merge_entries -h
+    scil_json_convert_entries_to_xlsx -h
 
     touch all__stats.json
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        scilpy: \$(pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
-
+        scilpy: \$(uv pip -q -n list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
     END_VERSIONS
     """
 }

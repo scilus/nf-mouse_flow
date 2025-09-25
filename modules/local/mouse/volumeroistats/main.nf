@@ -2,9 +2,7 @@ process MOUSE_VOLUMEROISTATS {
     tag "$meta.id"
     label 'process_high'
 
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        "https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif":
-        "scilus/scilus:2.1.0"}"
+    container "scilus/scilpy:2.2.0_cpu"
 
     input:
         tuple val(meta), path(metrics_list), path(mask_directory)
@@ -40,11 +38,11 @@ process MOUSE_VOLUMEROISTATS {
         cp \$mask masks/\${bname}.nii.gz
     done
 
-    scil_volume_stats_in_ROI.py masks/*gz --metrics_dir metrics -f > ${prefix}__stats.json
+    scil_volume_stats_in_ROI masks/*gz --metrics_dir metrics -f > ${prefix}__stats.json
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        scilpy: \$(pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
+        scilpy: \$(uv pip -q -n list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
     END_VERSIONS
     """
 
@@ -52,16 +50,13 @@ process MOUSE_VOLUMEROISTATS {
     def prefix = task.ext.prefix ?: "${meta.id}"
 
     """
-    scil_volume_stats_in_ROI.py -h
+    scil_volume_stats_in_ROI -h
 
     touch ${prefix}__stats.json
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        scilpy: \$(pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
-        mrtrix: \$(dwidenoise -version 2>&1 | sed -n 's/== dwidenoise \\([0-9.]\\+\\).*/\\1/p')
-        fsl: \$(flirt -version 2>&1 | sed -n 's/FLIRT version \\([0-9.]\\+\\)/\\1/p')
-
+        scilpy: \$(uv pip -q -n list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
     END_VERSIONS
     """
 }

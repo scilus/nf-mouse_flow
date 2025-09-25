@@ -2,9 +2,7 @@ process MOUSE_N4 {
     tag "$meta.id"
     label 'process_high'
 
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        "https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif":
-        "scilus/scilus:2.1.0"}"
+    container "scilus/scilus:2.2.0"
 
     input:
         tuple val(meta), path(dwi), path(b0), path(mask)
@@ -28,13 +26,12 @@ process MOUSE_N4 {
 	export OPENBLAS_NUM_THREADS=1
 
 	N4BiasFieldCorrection -i $b0 -x $mask -o [${prefix}__b0_n4.nii.gz, ${prefix}__bias_field_b0.nii.gz] -c [$convergence, $threshold]
-	scil_dwi_apply_bias_field.py $dwi ${prefix}__bias_field_b0.nii.gz ${prefix}__dwi_n4.nii.gz -f
+	scil_dwi_apply_bias_field $dwi ${prefix}__bias_field_b0.nii.gz ${prefix}__dwi_n4.nii.gz -f
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        scilpy: \$(pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
-        fsl: \$(flirt -version 2>&1 | sed -n 's/FLIRT version \\([0-9.]\\+\\)/\\1/p')
-        N4BiasFieldCorrection: \$(maskbackgroundnoise -h)
+        scilpy: \$(uv pip -q -n list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
+        ants: \$(N4BiasFieldCorrection --version 2>&1 | sed -n 's/ANTs Version: v\\([0-9.]\\+\\)/\\1/p')
     END_VERSIONS
     """
 
@@ -42,7 +39,7 @@ process MOUSE_N4 {
     def prefix = task.ext.prefix ?: "${meta.id}"
 
     """
-    scil_dwi_apply_bias_field.py -h
+    scil_dwi_apply_bias_field -h
     N4BiasFieldCorrection -h
 
     touch ${prefix}__dwi_n4.nii.gz
@@ -51,10 +48,8 @@ process MOUSE_N4 {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        scilpy: \$(pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
-        mrtrix: \$(dwidenoise -version 2>&1 | sed -n 's/== dwidenoise \\([0-9.]\\+\\).*/\\1/p')
-        fsl: \$(flirt -version 2>&1 | sed -n 's/FLIRT version \\([0-9.]\\+\\)/\\1/p')
-
+        scilpy: \$(uv pip -q -n list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
+        ants: \$(N4BiasFieldCorrection --version 2>&1 | sed -n 's/ANTs Version: v\\([0-9.]\\+\\)/\\1/p')
     END_VERSIONS
     """
 }

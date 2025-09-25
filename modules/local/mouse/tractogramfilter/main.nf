@@ -26,15 +26,15 @@ process MOUSE_TRACTOGRAMFILTER {
     def alpha = task.ext.alpha ?: "0.6"
 
     """
-    scil_tractogram_filter_by_roi.py ${trk} ${prefix}__tmp.trk \
+    scil_tractogram_filter_by_roi ${trk} ${prefix}__tmp.trk \
         --drawn_roi ${mask1} ${mode_mask1} ${criteria_mask1} \
         --drawn_roi ${mask2} ${mode_mask2} ${criteria_mask2}
     
-    scil_bundle_reject_outliers.py ${prefix}__tmp.trk ${prefix}__${suffix}.trk --alpha ${alpha}
+    scil_bundle_reject_outliers ${prefix}__tmp.trk ${prefix}__${suffix}.trk --alpha ${alpha}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        scilpy: \$(pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
+        scilpy: \$(uv pip -q -n list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
     END_VERSIONS
     """
 
@@ -42,13 +42,14 @@ process MOUSE_TRACTOGRAMFILTER {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def suffix = task.ext.first_suffix ? "${task.ext.first_suffix}_filtered" : "filtered"
     """
-    scil_tractogram_filter_by_roi.py -h
+    scil_tractogram_filter_by_roi -h
+    scil_bundle_reject_outliers -h
 
     touch ${prefix}__${suffix}.trk
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        scilpy: \$(pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
+        scilpy: \$(uv pip -q -n list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
     END_VERSIONS
     """
 }
