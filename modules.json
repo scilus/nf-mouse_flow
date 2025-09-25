@@ -48,7 +48,7 @@
           },
           "reconst/qball": {
             "branch": "main",
-            "git_sha": "a4d4eb10c7aa9a1bf47ea5063beda18d49e0c94c",
+            "git_sha": "5420aa212ac5ad3f255f50ca5b0d5995693f8c35",
             "installed_by": ["modules"]
           },
           "tracking/localtracking": {
