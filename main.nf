@@ -108,14 +108,14 @@ workflow {
         .map { meta, dwi, b0, mask ->
             [meta, dwi, b0, mask ?: []]}  // Use empty list if mask is null
 
-    MOUSE_BET(ch_for_bet)
+    MOUSE_BETNNUNET(ch_for_bet)
 
     if (params.run_n4) {
         ch_N4 = ch_after_eddy
             .map{ meta, dwi, _bval, _bvec ->
                     tuple(meta, dwi)}
-            .join(MOUSE_BET.out.b0)
-            .join(MOUSE_BET.out.mask)
+            .join(MOUSE_BETNNUNET.out.b0)
+            .join(MOUSE_BETNNUNET.out.mask)
         MOUSE_N4(ch_N4)
         ch_after_n4 = MOUSE_N4.out.dwi_n4
     }
