@@ -103,7 +103,7 @@ workflow {
     
     UTILS_EXTRACTB0(ch_eddy)
     IMAGE_EXTRACTSHELLS(ch_eddy)
-    MOUSE_VOLUMEMEAN(IMAGE_EXTRACTSHELLS.eddy)
+    MOUSE_VOLUMEMEAN(IMAGE_EXTRACTSHELLS.out.shells)
     
     PREPARE_NNUNET_B0(UTILS_EXTRACTB0.out.b0)
     PREPARE_NNUNET_DWI(MOUSE_VOLUMEMEAN.out.volume)
@@ -144,8 +144,6 @@ workflow {
     ch_for_reconst = RESAMPLE_DWI.out.image
                                     .join(ch_after_eddy.map{ [it[0], it[2], it[3]] })
                                     .join(IMAGE_CONVERT.out.image)
-
-
 
     RECONST_DTIMETRICS(ch_for_reconst)
     ch_multiqc_files = ch_multiqc_files.mix(RECONST_DTIMETRICS.out.mqc)
@@ -204,5 +202,5 @@ workflow {
         return tuple(meta, files)
     }
 
-    MULTIQC(ch_multiqc_files, [], ch_multiqc_config.toList(), [], [], [])
+    // MULTIQC(ch_multiqc_files, [], ch_multiqc_config.toList(), [], [], [])
 }

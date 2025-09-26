@@ -2,7 +2,7 @@ process MOUSE_REGISTRATION {
     tag "$meta.id"
     label 'process_high'
 
-    container "scilus/scilus:2.2.0"
+    container "scilus/mouse-utils:dev"
 
     input:
         tuple val(meta), path(dwi), path(bval), path(bvec), path(mask), path(atlas_directory)
@@ -55,7 +55,7 @@ process MOUSE_REGISTRATION {
     echo "Min res: \$min_res"
     echo "Step_param res: \$step_param"
 
-    params_iterations=\$(ants_generate_iterations --min \$min_res --max \$max_param --step \$step_param | tr -d '\\')
+    params_iterations=\$(ants_generate_iterations.py --min \$min_res --max \$max_param --step \$step_param | tr -d '\\')
     echo "Params iteration: \n \$params_iterations \n\n"
 
     # Which atlas resolution is closest to the input resolution
@@ -169,7 +169,7 @@ process MOUSE_REGISTRATION {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        scilpy: \$(pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
+	scilpy: \$(uv -q -n pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
         fsl: \$(flirt -version 2>&1 | sed -n 's/FLIRT version \\([0-9.]\\+\\)/\\1/p')
     END_VERSIONS
     """
@@ -191,7 +191,7 @@ process MOUSE_REGISTRATION {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        scilpy: \$(pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
+	scilpy: \$(uv -q -n pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
         mrtrix: \$(dwidenoise -version 2>&1 | sed -n 's/== dwidenoise \\([0-9.]\\+\\).*/\\1/p')
         fsl: \$(flirt -version 2>&1 | sed -n 's/FLIRT version \\([0-9.]\\+\\)/\\1/p')
     END_VERSIONS

@@ -2,7 +2,7 @@ process MOUSE_EXTRACTMASKS {
     tag "$meta.id"
     label 'process_high'
 
-    container "scilus/mouse-flow:dev"
+    container "scilus/mouse-utils:dev"
 
     input:
         tuple val(meta), path(atlas)
@@ -27,7 +27,7 @@ process MOUSE_EXTRACTMASKS {
         for side in L R; do
             ids=\$(cat ${prefix}__masks/\${curr_label}_\$side.txt)
             if [[ \$ids ]]; then
-                scil_labels_combine.py ${prefix}__masks/${prefix}__\${curr_label}_\$side.nii.gz \
+                scil_labels_combine ${prefix}__masks/${prefix}__\${curr_label}_\$side.nii.gz \
                     --volume_ids $atlas \${ids} \
                     --merge_groups -f
             fi
@@ -36,7 +36,7 @@ process MOUSE_EXTRACTMASKS {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        scilpy: \$(pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
+	scilpy: \$(uv -q -n pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
     END_VERSIONS
     """
 
@@ -50,7 +50,7 @@ process MOUSE_EXTRACTMASKS {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        scilpy: \$(pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
+        scilpy: \$(uv -q -n pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
     END_VERSIONS
     """
 }

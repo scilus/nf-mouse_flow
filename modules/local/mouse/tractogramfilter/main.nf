@@ -2,9 +2,7 @@ process MOUSE_TRACTOGRAMFILTER {
     tag "$meta.id"
     label 'process_high'
 
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif':
-        'scilus/scilus:2.1.0' }"
+    container "scilus/scilpy:2.2.0_cpu"
 
     input:
         tuple val(meta), path(trk), path(mask1), path(mask2)
