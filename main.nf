@@ -2,6 +2,9 @@
 include { DENOISING_MPPCA } from './modules/nf-neuro/denoising/mppca/main.nf'
 include { PREPROC_SINGLEEDDY } from './modules/local/preproc/singleeddy/main.nf'
 include { UTILS_EXTRACTB0 } from './modules/nf-neuro/utils/extractb0/main.nf'
+include { MOUSE_VOLUMEMEAN} from './modules/local/mouse/volumemean/main.nf'
+include { MOUSE_PREPARENNUNET as PREPARE_NNUNET_DWI } from './modules/local/mouse/preparennunet/main.nf'
+include { MOUSE_PREPARENNUNET as PREPARE_NNUNET_B0 } from './modules/local/mouse/preparennunet/main.nf'
 include { MOUSE_BETNNUNET } from './modules/local/mouse/betnnunet/main.nf'
 include { MOUSE_N4 } from './modules/local/mouse/n4/main.nf'
 include { IMAGE_RESAMPLE as RESAMPLE_DWI} from './modules/nf-neuro/image/resample/main.nf'
@@ -97,10 +100,14 @@ workflow {
         ch_after_eddy = ch_eddy
     }
     
-    UTILS_EXTRACTB0(ch_after_eddy)
+    UTILS_EXTRACTB0(ch_eddy)
+    MOUSE_VOLUMEMEAN(ch_dwi_bvalbvec.dwi)
+    
+    PREPARE_NNUNET_B0(UTILS_EXTRACTB0.out.b0)
+    PREPARE_NNUNET_DWI(MOUSE_VOLUMEMEAN.out.volume)
 
-    ch_for_bet = ch_after_eddy.map{[ it[0], it[1] ]}
-        .join(UTILS_EXTRACTB0.out.b0, by: 0, remainder: true)
+    ch_for_bet = PREPARE_NNUNET_DWI.out.nnunetready
+        .join(PREPARE_NNUNET_B0.out.nnunetready, by: 0, remainder: true)
         .join(data.mask, by: 0, remainder: true)
         .map { meta, dwi, b0, mask ->
             [meta, dwi, b0, mask ?: []]}  // Use empty list if mask is null

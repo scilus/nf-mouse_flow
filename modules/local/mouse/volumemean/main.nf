@@ -7,7 +7,7 @@ process MOUSE_VOLUMEMEAN {
     input:
         tuple val(meta), path(image)
     output:
-        tuple val(meta), path("*_mean.nii.gz")   , emit: out_operation
+        tuple val(meta), path("*_mean.nii.gz")   , emit: volume
         path "versions.yml"                          , emit: versions
 
     when:
