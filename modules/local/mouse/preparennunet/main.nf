@@ -7,7 +7,7 @@ process MOUSE_PREPARENNUNET {
     input:
         tuple val(meta), path(image)
     output:
-        tuple val(meta), path("*_nnunetReady.nii.gz"), emit: nnunetready
+        tuple val(meta), path("*_nnunetready.nii.gz"), emit: nnunetready
         path "versions.yml"                          , emit: versions
 
     when:

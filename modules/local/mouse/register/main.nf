@@ -79,7 +79,7 @@ process MOUSE_REGISTRATION {
     echo "Atlas resolution: \$atlas_resolution"
 
     AMBA_ref=$atlas_directory/\${atlas_resolution}_AMBA_ref.nii.gz
-    AMBA_inv=$atlas_directory/\${atlas_resolution}_AMBA_inv.nii.gz
+    AMBA_inv=$atlas_directory/\${atlas_resolution}_AMBA_inv_novent.nii.gz
     AMBA_ANO=$atlas_directory/\${atlas_resolution}_AMBA_ANO.nii.gz
     AMBA_LR=$atlas_directory/\${atlas_resolution}_AMBA_LR.nii.gz
     AMBA_ToM=$atlas_directory/\${atlas_resolution}_AMBA_ToM.nii.gz
