@@ -2,9 +2,7 @@ process PREPROC_SINGLEEDDY {
     tag "$meta.id"
     label 'process_high'
 
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        "https://scil.usherbrooke.ca/containers/scilus_2.1.0.sif":
-        "scilus/scilus:2.1.0"}"
+    container "scilus/scilus:dev"
 
     input:
         tuple val(meta), path(dwi), path(bval), path(bvec)
@@ -21,7 +19,7 @@ process PREPROC_SINGLEEDDY {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def readout = task.ext.readout ? task.ext.readout : ""
     def encoding = task.ext.encoding ? task.ext.encoding : ""
-    def eddy_cmd = task.ext.eddy_cmd ? task.ext.eddy_cmd : "eddy_cpu"
+    def eddy_cmd = task.ext.eddy_cmd
     def extra_args = task.ext.extra_args ?: ""
     def extra_ite = task.ext.extra_ite ?: ""
     def extra_thr = task.ext.extra_thr ?: ""
@@ -33,7 +31,7 @@ process PREPROC_SINGLEEDDY {
     export ANTS_RANDOM_SEED=7468
 
     fslmaths $dwi -Tmean -bin ${prefix}__mask_mec.nii.gz -odt short 
-	scil_dwi_prepare_eddy_command.py $dwi $bval $bvec \
+	scil_dwi_prepare_eddy_command $dwi $bval $bvec \
         ${prefix}__mask_mec.nii.gz \
         --encoding_direction $encoding\
         --readout $readout \
@@ -50,7 +48,7 @@ process PREPROC_SINGLEEDDY {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        scilpy: \$(pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
+        scilpy: \$(uv pip -q -n list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
         fsl: \$(flirt -version 2>&1 | sed -n 's/FLIRT version \\([0-9.]\\+\\)/\\1/p')
     END_VERSIONS
     """
@@ -60,7 +58,7 @@ process PREPROC_SINGLEEDDY {
 
     """
     fslmaths -h
-    scil_dwi_prepare_eddy_command.py -h
+    scil_dwi_prepare_eddy_command -h
 
     touch ${prefix}__dwi_eddy_corrected.nii.gz
     touch ${prefix}__dwi_eddy_corrected.bval
@@ -68,10 +66,8 @@ process PREPROC_SINGLEEDDY {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        scilpy: \$(pip list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
-        mrtrix: \$(dwidenoise -version 2>&1 | sed -n 's/== dwidenoise \\([0-9.]\\+\\).*/\\1/p')
+        scilpy: \$(uv pip -q -n list | grep scilpy | tr -s ' ' | cut -d' ' -f2)
         fsl: \$(flirt -version 2>&1 | sed -n 's/FLIRT version \\([0-9.]\\+\\)/\\1/p')
-
     END_VERSIONS
     """
 }

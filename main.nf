@@ -1,7 +1,12 @@
 #!/usr/bin/env nextflow
 include { DENOISING_MPPCA } from './modules/nf-neuro/denoising/mppca/main.nf'
 include { PREPROC_SINGLEEDDY } from './modules/local/preproc/singleeddy/main.nf'
-include { MOUSE_BET } from './modules/local/mouse/bet/main.nf'
+include { UTILS_EXTRACTB0 } from './modules/nf-neuro/utils/extractb0/main.nf'
+include { IMAGE_EXTRACTSHELLS } from './modules/local/image/extractshells/main.nf'
+include { MOUSE_VOLUMEMEAN} from './modules/local/mouse/volumemean/main.nf'
+include { MOUSE_PREPARENNUNET as PREPARE_NNUNET_DWI } from './modules/local/mouse/preparennunet/main.nf'
+include { MOUSE_PREPARENNUNET as PREPARE_NNUNET_B0 } from './modules/local/mouse/preparennunet/main.nf'
+include { MOUSE_BETNNUNET } from './modules/local/mouse/betnnunet/main.nf'
 include { MOUSE_N4 } from './modules/local/mouse/n4/main.nf'
 include { IMAGE_RESAMPLE as RESAMPLE_DWI} from './modules/nf-neuro/image/resample/main.nf'
 include { IMAGE_RESAMPLE as RESAMPLE_MASK} from './modules/nf-neuro/image/resample/main.nf'
@@ -10,7 +15,7 @@ include { MOUSE_REGISTRATION } from './modules/local/mouse/register/main.nf'
 include { RECONST_DTIMETRICS } from './modules/nf-neuro/reconst/dtimetrics/main.nf'
 include { RECONST_FRF } from './modules/nf-neuro/reconst/frf/main.nf'
 include { RECONST_FODF } from './modules/nf-neuro/reconst/fodf/main.nf'
-include { RECONST_QBALL } from './modules/local/reconst/qball/main.nf'
+include { RECONST_QBALL } from './modules/nf-neuro/reconst/qball/main.nf'
 include { TRACKING_MASK } from './modules/local/tracking/mask/main.nf'
 include { TRACKING_LOCALTRACKING } from './modules/nf-neuro/tracking/localtracking/main.nf'
 include { MOUSE_EXTRACTMASKS } from './modules/local/mouse/extractmasks/main.nf'
@@ -59,6 +64,7 @@ workflow get_data {
 
 workflow {
 
+    log.info("Uses GPU: $params.use_gpu")
     // Define channel for multiqc files
     ch_multiqc_files = Channel.empty()
     ch_multiqc_config = Channel.fromPath("$projectDir/assets/multiqc_config.yml", checkIfExists: true)
@@ -95,19 +101,27 @@ workflow {
         ch_after_eddy = ch_eddy
     }
     
-    ch_for_bet = ch_after_eddy.join(data.mask, by: 0, remainder: true)
-        .map { meta, dwi, bval, bvec, mask ->
-            [meta, dwi, bval, bvec, mask ?: []]}  // Use empty list if mask is null
+    UTILS_EXTRACTB0(ch_eddy)
+    IMAGE_EXTRACTSHELLS(ch_eddy)
+    MOUSE_VOLUMEMEAN(IMAGE_EXTRACTSHELLS.out.shells)
+    
+    PREPARE_NNUNET_B0(UTILS_EXTRACTB0.out.b0)
+    PREPARE_NNUNET_DWI(MOUSE_VOLUMEMEAN.out.volume)
 
-    MOUSE_BET(ch_for_bet)
+    ch_for_bet = PREPARE_NNUNET_DWI.out.nnunetready
+        .join(PREPARE_NNUNET_B0.out.nnunetready, by: 0, remainder: true)
+        .join(data.mask, by: 0, remainder: true)
+        .map { meta, dwi, b0, mask ->
+            [meta, dwi, b0, mask ?: []]}  // Use empty list if mask is null
 
+    MOUSE_BETNNUNET(ch_for_bet)
 
     if (params.run_n4) {
         ch_N4 = ch_after_eddy
             .map{ meta, dwi, _bval, _bvec ->
                     tuple(meta, dwi)}
-            .join(MOUSE_BET.out.b0)
-            .join(MOUSE_BET.out.mask)
+            .join(UTILS_EXTRACTB0.out.b0)
+            .join(MOUSE_BETNNUNET.out.mask)
         MOUSE_N4(ch_N4)
         ch_after_n4 = MOUSE_N4.out.dwi_n4
     }
@@ -116,7 +130,7 @@ workflow {
             .map{ meta, dwi, _bval, _bvec -> tuple(meta, dwi)}
     }
     RESAMPLE_DWI(ch_after_n4.map{ meta, dwi -> [meta, dwi, []] }) // Add an empty list for the optional reference image
-    RESAMPLE_MASK(MOUSE_BET.out.mask.map{ meta, mask -> [meta, mask, []] })
+    RESAMPLE_MASK(MOUSE_BETNNUNET.out.mask.map{ meta, mask -> [meta, mask, []] })
 
     IMAGE_CONVERT(RESAMPLE_MASK.out.image)
     
@@ -130,8 +144,6 @@ workflow {
     ch_for_reconst = RESAMPLE_DWI.out.image
                                     .join(ch_after_eddy.map{ [it[0], it[2], it[3]] })
                                     .join(IMAGE_CONVERT.out.image)
-
-
 
     RECONST_DTIMETRICS(ch_for_reconst)
     ch_multiqc_files = ch_multiqc_files.mix(RECONST_DTIMETRICS.out.mqc)
@@ -190,5 +202,5 @@ workflow {
         return tuple(meta, files)
     }
 
-    MULTIQC(ch_multiqc_files, [], ch_multiqc_config.toList(), [], [], [], [])
+    // MULTIQC(ch_multiqc_files, [], ch_multiqc_config.toList(), [], [], [])
 }
