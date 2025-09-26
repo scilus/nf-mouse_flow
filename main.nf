@@ -21,7 +21,22 @@ include { TRACKING_LOCALTRACKING } from './modules/nf-neuro/tracking/localtracki
 include { MOUSE_EXTRACTMASKS } from './modules/local/mouse/extractmasks/main.nf'
 include { MOUSE_VOLUMEROISTATS } from './modules/local/mouse/volumeroistats/main.nf'
 include { MOUSE_COMBINESTATS } from './modules/local/mouse/combinestats/main.nf'
+include { LABEL_COMBINE as CREATE_FX_INCLUDE } from './modules/local/label/combine/main.nf'
+include { LABEL_COMBINE as CREATE_FX_EXCLUDE } from './modules/local/label/combine/main.nf'
+include { LABEL_COMBINE as CREATE_CST_EXCLUDE } from './modules/local/label/combine/main.nf'
+include { LABEL_COMBINE as CREATE_CST_INCLUDE } from './modules/local/label/combine/main.nf'
+include { LABEL_COMBINE as CREATE_CC_INCLUDE } from './modules/local/label/combine/main.nf'
+include { LABEL_COMBINE as CREATE_CC_EXCLUDE } from './modules/local/label/combine/main.nf'
+include { LABEL_COMBINE as CREATE_AC_EXCLUDE } from './modules/local/label/combine/main.nf'
+include { LABEL_COMBINE as CREATE_AC_INCLUDE } from './modules/local/label/combine/main.nf'
+include { TRACKING_FILTERING as CREATE_CST } from './modules/local/tracking/filtering/main.nf'
+include { TRACKING_FILTERING as CREATE_FX } from './modules/local/tracking/filtering/main.nf'
+include { IMAGE_GETMIDSAGITTAL as GETMIDSAGITTAL_AC } from './modules/local/image/getmidsagittal/main.nf'
+include { IMAGE_GETMIDSAGITTAL as GETMIDSAGITTAL_CC } from './modules/local/image/getmidsagittal/main.nf'
+include { TRACKING_FILTERING as CREATE_AC } from './modules/local/tracking/filtering/main.nf'
+include { TRACKING_FILTERING as CREATE_CC } from './modules/local/tracking/filtering/main.nf'
 include { MULTIQC } from "./modules/nf-core/multiqc/main"
+include { PRE_QC } from './modules/local/mouse/preqc/main.nf'
 
 workflow get_data {
     main:
@@ -170,12 +185,12 @@ workflow {
 
     TRACKING_MASK(IMAGE_CONVERT.out.image
                     .join(MOUSE_REGISTRATION.out.ANO))
+    ch_multiqc_files = ch_multiqc_files.mix(TRACKING_MASK.out.mqc)
 
     TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
                 .join(reconst_sh)
                 .join(TRACKING_MASK.out.seeding_mask))
     ch_multiqc_files = ch_multiqc_files.mix(TRACKING_LOCALTRACKING.out.mqc)
-
 
     MOUSE_EXTRACTMASKS(MOUSE_REGISTRATION.out.ANO_LR)
 
@@ -194,6 +209,37 @@ workflow {
                 .map{ _meta, json -> json}
                 .collect()
     MOUSE_COMBINESTATS(all_stats)
+
+
+    CREATE_FX_EXCLUDE(MOUSE_REGISTRATION.out.ANO)
+    CREATE_FX_INCLUDE(MOUSE_REGISTRATION.out.ANO)
+    CREATE_FX(TRACKING_LOCALTRACKING.out.trk
+                .join(CREATE_FX_INCLUDE.out.labels_combined)
+                .join(CREATE_FX_EXCLUDE.out.labels_combined))
+    ch_multiqc_files = ch_multiqc_files.mix(CREATE_FX.out.mqc)
+
+    CREATE_CST_EXCLUDE(MOUSE_REGISTRATION.out.ANO)
+    CREATE_CST_INCLUDE(MOUSE_REGISTRATION.out.ANO)
+    CREATE_CST(TRACKING_LOCALTRACKING.out.trk
+                .join(CREATE_CST_INCLUDE.out.labels_combined)
+                .join(CREATE_CST_EXCLUDE.out.labels_combined))
+    ch_multiqc_files = ch_multiqc_files.mix(CREATE_CST.out.mqc)
+
+    CREATE_CC_EXCLUDE(MOUSE_REGISTRATION.out.ANO)
+    CREATE_CC_INCLUDE(MOUSE_REGISTRATION.out.ANO)
+    GETMIDSAGITTAL_CC(CREATE_CC_INCLUDE.out.labels_combined)
+    CREATE_CC(TRACKING_LOCALTRACKING.out.trk
+                .join(GETMIDSAGITTAL_CC.out.roi)
+                .join(CREATE_CC_EXCLUDE.out.labels_combined))
+    ch_multiqc_files = ch_multiqc_files.mix(CREATE_CC.out.mqc)
+
+    CREATE_AC_EXCLUDE(MOUSE_REGISTRATION.out.ANO)
+    CREATE_AC_INCLUDE(MOUSE_REGISTRATION.out.ANO)
+    GETMIDSAGITTAL_AC(CREATE_AC_INCLUDE.out.labels_combined)
+    CREATE_AC(TRACKING_LOCALTRACKING.out.trk
+                .join(GETMIDSAGITTAL_AC.out.roi)
+                .join(CREATE_AC_EXCLUDE.out.labels_combined))
+    ch_multiqc_files = ch_multiqc_files.mix(CREATE_AC.out.mqc)
 
     ch_multiqc_files = ch_multiqc_files
     .groupTuple()
