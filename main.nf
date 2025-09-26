@@ -2,6 +2,7 @@
 include { DENOISING_MPPCA } from './modules/nf-neuro/denoising/mppca/main.nf'
 include { PREPROC_SINGLEEDDY } from './modules/local/preproc/singleeddy/main.nf'
 include { UTILS_EXTRACTB0 } from './modules/nf-neuro/utils/extractb0/main.nf'
+include { IMAGE_EXTRACTSHELLS } from './modules/local/image/extractshells/main.nf'
 include { MOUSE_VOLUMEMEAN} from './modules/local/mouse/volumemean/main.nf'
 include { MOUSE_PREPARENNUNET as PREPARE_NNUNET_DWI } from './modules/local/mouse/preparennunet/main.nf'
 include { MOUSE_PREPARENNUNET as PREPARE_NNUNET_B0 } from './modules/local/mouse/preparennunet/main.nf'
@@ -101,7 +102,8 @@ workflow {
     }
     
     UTILS_EXTRACTB0(ch_eddy)
-    MOUSE_VOLUMEMEAN(ch_dwi_bvalbvec.dwi)
+    IMAGE_EXTRACTSHELLS(ch_eddy)
+    MOUSE_VOLUMEMEAN(IMAGE_EXTRACTSHELLS.eddy)
     
     PREPARE_NNUNET_B0(UTILS_EXTRACTB0.out.b0)
     PREPARE_NNUNET_DWI(MOUSE_VOLUMEMEAN.out.volume)
