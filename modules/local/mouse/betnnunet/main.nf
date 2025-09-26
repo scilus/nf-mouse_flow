@@ -21,11 +21,14 @@ process MOUSE_BETNNUNET {
     then
         mv $mask ${prefix}__mask.nii.gz
     else
-        mkdir -p Database/RAW/Dataset012_ExVivoBrainFSboth/imageTs
-        ln -s /Database/RAW/Dataset012_ExVivoBrainFSboth/dataset.json Database/RAW/Dataset012_ExVivoBrainFSboth/imageTs/dataset.json
+	export nnUNet_raw="Database/RAW/"
+	export nnUNet_preprocessed="Database/PRE/"
+	export nnUNet_results="Database/RESULTS/"
+        mkdir -p Database/RAW/Dataset012_ExVivoBrainFSboth/imagesTs
+        ln -s /Database/RAW/Dataset012_ExVivoBrainFSboth/dataset.json Database/RAW/Dataset012_ExVivoBrainFSboth/dataset.json
         ln -s /Database/RESULTS Database/RESULTS
-        mv $b0 Database/RAW/Dataset012_ExVivoBrainFSboth/imageTs/exvivobrain_000_0000.nii.gz
-        mv $dwi Database/RAW/Dataset012_ExVivoBrainFSboth/imageTs/exvivobrain_000_0001.nii.gz
+        mv $b0 Database/RAW/Dataset012_ExVivoBrainFSboth/imagesTs/exvivobrain_000_0000.nii.gz
+        mv $dwi Database/RAW/Dataset012_ExVivoBrainFSboth/imagesTs/exvivobrain_000_0001.nii.gz
         nnUNetv2_predict -i Database/RAW/Dataset012_ExVivoBrainFSboth/imagesTs -o ./ -d 012 -c 3d_fullres -f all -npp 1 -nps 1 -device 'cpu' -tr nnUNetTrainer -chk checkpoint_best.pth
         mv exvivobrain_000.nii.gz ${prefix}__mask.nii.gz
     fi  

@@ -60,6 +60,7 @@ workflow get_data {
 
 workflow {
 
+    log.info("Uses GPU: $params.use_gpu")
     // Define channel for multiqc files
     ch_multiqc_files = Channel.empty()
     ch_multiqc_config = Channel.fromPath("$projectDir/assets/multiqc_config.yml", checkIfExists: true)
@@ -96,14 +97,10 @@ workflow {
         ch_after_eddy = ch_eddy
     }
     
-    ch_for_extract_b0 = ch_after_eddy.join(data.mask, by: 0, remainder: true)
-        .map { meta, dwi, bval, bvec, mask ->
-            [meta, dwi, bval, bvec, mask ?: []]}
+    UTILS_EXTRACTB0(ch_after_eddy)
 
-    UTILS_EXTRACTB0(ch_for_extract_b0)
-
-    ch_for_bet = ch_after_eddy.map([it[0], it[1]])
-        .join(UTILS_EXTRACTB0.b0, by: 0, remainder: true)
+    ch_for_bet = ch_after_eddy.map{[ it[0], it[1] ]}
+        .join(UTILS_EXTRACTB0.out.b0, by: 0, remainder: true)
         .join(data.mask, by: 0, remainder: true)
         .map { meta, dwi, b0, mask ->
             [meta, dwi, b0, mask ?: []]}  // Use empty list if mask is null
@@ -114,7 +111,7 @@ workflow {
         ch_N4 = ch_after_eddy
             .map{ meta, dwi, _bval, _bvec ->
                     tuple(meta, dwi)}
-            .join(MOUSE_BETNNUNET.out.b0)
+            .join(UTILS_EXTRACTB0.out.b0)
             .join(MOUSE_BETNNUNET.out.mask)
         MOUSE_N4(ch_N4)
         ch_after_n4 = MOUSE_N4.out.dwi_n4
@@ -124,7 +121,7 @@ workflow {
             .map{ meta, dwi, _bval, _bvec -> tuple(meta, dwi)}
     }
     RESAMPLE_DWI(ch_after_n4.map{ meta, dwi -> [meta, dwi, []] }) // Add an empty list for the optional reference image
-    RESAMPLE_MASK(MOUSE_BET.out.mask.map{ meta, mask -> [meta, mask, []] })
+    RESAMPLE_MASK(MOUSE_BETNNUNET.out.mask.map{ meta, mask -> [meta, mask, []] })
 
     IMAGE_CONVERT(RESAMPLE_MASK.out.image)
     

@@ -2,7 +2,7 @@ process PREPROC_SINGLEEDDY {
     tag "$meta.id"
     label 'process_high'
 
-    container "scilus/scilus:2.2.0"
+    container "scilus/scilus:dev"
 
     input:
         tuple val(meta), path(dwi), path(bval), path(bvec)
@@ -19,7 +19,7 @@ process PREPROC_SINGLEEDDY {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def readout = task.ext.readout ? task.ext.readout : ""
     def encoding = task.ext.encoding ? task.ext.encoding : ""
-    def eddy_cmd = task.ext.eddy_cmd ? task.ext.eddy_cmd : "eddy_cpu"
+    def eddy_cmd = task.ext.eddy_cmd
     def extra_args = task.ext.extra_args ?: ""
     def extra_ite = task.ext.extra_ite ?: ""
     def extra_thr = task.ext.extra_thr ?: ""
