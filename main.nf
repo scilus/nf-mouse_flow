@@ -21,26 +21,12 @@ include { TRACKING_LOCALTRACKING } from './modules/nf-neuro/tracking/localtracki
 include { MOUSE_EXTRACTMASKS } from './modules/local/mouse/extractmasks/main.nf'
 include { MOUSE_VOLUMEROISTATS } from './modules/local/mouse/volumeroistats/main.nf'
 include { MOUSE_COMBINESTATS } from './modules/local/mouse/combinestats/main.nf'
-include { LABEL_COMBINE as CREATE_FX_INCLUDE } from './modules/local/label/combine/main.nf'
-include { LABEL_COMBINE as CREATE_FX_EXCLUDE } from './modules/local/label/combine/main.nf'
-include { LABEL_COMBINE as CREATE_CST_EXCLUDE } from './modules/local/label/combine/main.nf'
-include { LABEL_COMBINE as CREATE_CST_INCLUDE } from './modules/local/label/combine/main.nf'
-include { LABEL_COMBINE as CREATE_CC_INCLUDE } from './modules/local/label/combine/main.nf'
-include { LABEL_COMBINE as CREATE_CC_EXCLUDE } from './modules/local/label/combine/main.nf'
-include { LABEL_COMBINE as CREATE_AC_EXCLUDE } from './modules/local/label/combine/main.nf'
-include { LABEL_COMBINE as CREATE_AC_INCLUDE } from './modules/local/label/combine/main.nf'
-include { TRACKING_FILTERING as CREATE_CST } from './modules/local/tracking/filtering/main.nf'
-include { TRACKING_FILTERING as CREATE_FX } from './modules/local/tracking/filtering/main.nf'
-include { IMAGE_GETMIDSAGITTAL as GETMIDSAGITTAL_AC } from './modules/local/image/getmidsagittal/main.nf'
-include { IMAGE_GETMIDSAGITTAL as GETMIDSAGITTAL_CC } from './modules/local/image/getmidsagittal/main.nf'
-include { TRACKING_FILTERING as CREATE_AC } from './modules/local/tracking/filtering/main.nf'
-include { TRACKING_FILTERING as CREATE_CC } from './modules/local/tracking/filtering/main.nf'
 include { MULTIQC } from "./modules/nf-core/multiqc/main"
 include { PRE_QC } from './modules/local/mouse/preqc/main.nf'
 
 workflow get_data {
     main:
-        if ( !params.input && !params.atlas ) {
+        if ( !params.input ) {
             log.info "You must provide an input directory containing all images using:"
             log.info ""
             log.info "        --input=/path/to/[input]             Input directory containing your subjects"
@@ -55,14 +41,11 @@ workflow get_data {
             log.info "                                ├-- *dwi.bval"
             log.info "                                └-- *dwi.bvec"
             log.info ""
-            log.info "        --atlas=/path/to/[atlas]             Input Atlas directory"
             log.info ""
             error "Please resubmit your command with the previous file structure."
         }
         input = file(params.input)
-        atlas = file(params.atlas)
         // ** Loading all files. ** //
-        atlas_channel = Channel.fromPath("$atlas", type: 'dir')
         dwi_channel = Channel.fromFilePairs("$input/**/*dwi.{nii.gz,bval,bvec}", size: 3, flat: true)
             { it.parent.name }
             .map{ sid, bvals, bvecs, dwi -> [ [id: sid], dwi, bvals, bvecs ] } // Reordering the inputs.
@@ -73,7 +56,6 @@ workflow get_data {
 
     emit:
         dwi   = dwi_channel
-        atlas = atlas_channel
         mask  = mask_channel
 }
 
@@ -152,7 +134,6 @@ workflow {
     ch_for_mouse_registration = RESAMPLE_DWI.out.image
                                     .join(ch_after_eddy.map{ [it[0], it[2], it[3]] })
                                     .join(IMAGE_CONVERT.out.image)
-                                    .combine(data.atlas)
     MOUSE_REGISTRATION(ch_for_mouse_registration)
     ch_multiqc_files = ch_multiqc_files.mix(MOUSE_REGISTRATION.out.mqc)
 
@@ -209,37 +190,6 @@ workflow {
                 .map{ _meta, json -> json}
                 .collect()
     MOUSE_COMBINESTATS(all_stats)
-
-
-    CREATE_FX_EXCLUDE(MOUSE_REGISTRATION.out.ANO)
-    CREATE_FX_INCLUDE(MOUSE_REGISTRATION.out.ANO)
-    CREATE_FX(TRACKING_LOCALTRACKING.out.trk
-                .join(CREATE_FX_INCLUDE.out.labels_combined)
-                .join(CREATE_FX_EXCLUDE.out.labels_combined))
-    ch_multiqc_files = ch_multiqc_files.mix(CREATE_FX.out.mqc)
-
-    CREATE_CST_EXCLUDE(MOUSE_REGISTRATION.out.ANO)
-    CREATE_CST_INCLUDE(MOUSE_REGISTRATION.out.ANO)
-    CREATE_CST(TRACKING_LOCALTRACKING.out.trk
-                .join(CREATE_CST_INCLUDE.out.labels_combined)
-                .join(CREATE_CST_EXCLUDE.out.labels_combined))
-    ch_multiqc_files = ch_multiqc_files.mix(CREATE_CST.out.mqc)
-
-    CREATE_CC_EXCLUDE(MOUSE_REGISTRATION.out.ANO)
-    CREATE_CC_INCLUDE(MOUSE_REGISTRATION.out.ANO)
-    GETMIDSAGITTAL_CC(CREATE_CC_INCLUDE.out.labels_combined)
-    CREATE_CC(TRACKING_LOCALTRACKING.out.trk
-                .join(GETMIDSAGITTAL_CC.out.roi)
-                .join(CREATE_CC_EXCLUDE.out.labels_combined))
-    ch_multiqc_files = ch_multiqc_files.mix(CREATE_CC.out.mqc)
-
-    CREATE_AC_EXCLUDE(MOUSE_REGISTRATION.out.ANO)
-    CREATE_AC_INCLUDE(MOUSE_REGISTRATION.out.ANO)
-    GETMIDSAGITTAL_AC(CREATE_AC_INCLUDE.out.labels_combined)
-    CREATE_AC(TRACKING_LOCALTRACKING.out.trk
-                .join(GETMIDSAGITTAL_AC.out.roi)
-                .join(CREATE_AC_EXCLUDE.out.labels_combined))
-    ch_multiqc_files = ch_multiqc_files.mix(CREATE_AC.out.mqc)
 
     ch_multiqc_files = ch_multiqc_files
     .groupTuple()
