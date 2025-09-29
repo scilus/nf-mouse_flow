@@ -2,11 +2,7 @@
 include { DENOISING_MPPCA } from './modules/nf-neuro/denoising/mppca/main.nf'
 include { PREPROC_SINGLEEDDY } from './modules/local/preproc/singleeddy/main.nf'
 include { UTILS_EXTRACTB0 } from './modules/nf-neuro/utils/extractb0/main.nf'
-include { IMAGE_EXTRACTSHELLS } from './modules/local/image/extractshells/main.nf'
-include { MOUSE_VOLUMEMEAN} from './modules/local/mouse/volumemean/main.nf'
-include { MOUSE_PREPARENNUNET as PREPARE_NNUNET_DWI } from './modules/local/mouse/preparennunet/main.nf'
-include { MOUSE_PREPARENNUNET as PREPARE_NNUNET_B0 } from './modules/local/mouse/preparennunet/main.nf'
-include { MOUSE_BETNNUNET } from './modules/local/mouse/betnnunet/main.nf'
+include { NNUNET } from './subworkflows/local/nnunet/'
 include { MOUSE_N4 } from './modules/local/mouse/n4/main.nf'
 include { IMAGE_RESAMPLE as RESAMPLE_DWI} from './modules/nf-neuro/image/resample/main.nf'
 include { IMAGE_RESAMPLE as RESAMPLE_MASK} from './modules/nf-neuro/image/resample/main.nf'
@@ -69,7 +65,7 @@ workflow {
     // ** Now call your input workflow to fetch your files ** //
     data = get_data()
 
-   ch_dwi_bvalbvec = data.dwi
+    ch_dwi_bvalbvec = data.dwi
         .multiMap { meta, dwi, bval, bvec ->
             dwi:    [ meta, dwi ]
             bvs_files: [ meta, bval, bvec ]
@@ -99,26 +95,19 @@ workflow {
     }
     
     UTILS_EXTRACTB0(ch_eddy)
-    IMAGE_EXTRACTSHELLS(ch_eddy)
-    MOUSE_VOLUMEMEAN(IMAGE_EXTRACTSHELLS.out.shells)
+    ch_nnunet = ch_eddy.join(UTILS_EXTRACTB0.out.b0)
+    .join(data.mask, by: 0, remainder: true)
+            .map { meta, dwi, b0, mask ->   
+                [meta, dwi, b0, mask ?: [   ]]}  // Use empty list if mask is null
     
-    PREPARE_NNUNET_B0(UTILS_EXTRACTB0.out.b0)
-    PREPARE_NNUNET_DWI(MOUSE_VOLUMEMEAN.out.volume)
-
-    ch_for_bet = PREPARE_NNUNET_DWI.out.nnunetready
-        .join(PREPARE_NNUNET_B0.out.nnunetready, by: 0, remainder: true)
-        .join(data.mask, by: 0, remainder: true)
-        .map { meta, dwi, b0, mask ->
-            [meta, dwi, b0, mask ?: []]}  // Use empty list if mask is null
-
-    MOUSE_BETNNUNET(ch_for_bet)
+    NNUNET(ch_nnunet)
 
     if (params.run_n4) {
         ch_N4 = ch_after_eddy
             .map{ meta, dwi, _bval, _bvec ->
                     tuple(meta, dwi)}
             .join(UTILS_EXTRACTB0.out.b0)
-            .join(MOUSE_BETNNUNET.out.mask)
+            .join(NNUNET.out.mask)
         MOUSE_N4(ch_N4)
         ch_after_n4 = MOUSE_N4.out.dwi_n4
     }
@@ -127,7 +116,7 @@ workflow {
             .map{ meta, dwi, _bval, _bvec -> tuple(meta, dwi)}
     }
     RESAMPLE_DWI(ch_after_n4.map{ meta, dwi -> [meta, dwi, []] }) // Add an empty list for the optional reference image
-    RESAMPLE_MASK(MOUSE_BETNNUNET.out.mask.map{ meta, mask -> [meta, mask, []] })
+    RESAMPLE_MASK(NNUNET.out.mask.map{ meta, mask -> [meta, mask, []] })
 
     IMAGE_CONVERT(RESAMPLE_MASK.out.image)
     
