@@ -19,7 +19,7 @@ process IMAGE_EXTRACTSHELLS {
     def dwi_shell_tolerance = task.ext.dwi_shell_tolerance ? "--tolerance " + task.ext.dwi_shell_tolerance : ""
     def min_shell_value = task.ext.min_shell_value ?: 0     /* Default value for min_fodf_shell_value */
     def max_shell_value = task.ext.max_shell_value ?: 10000000     /* Default value for min_fodf_shell_value */
-    def shells = task.ext.shells ?: "\$(tr ' ' '\n' < b136_dwi.bval | awk -v min=${min_shell_value} -v max=${max_shell_value} '{v=int(\$1)} v>=min && v<=max {print v}' | sort -nu | xargs)"
+    def shells = task.ext.shells ?: "\$(tr ' ' '\n' < $bval | awk -v min=${min_shell_value} -v max=${max_shell_value} '{v=int(\$1)} v>=min && v<=max {print v}' | sort -nu | xargs)"
     """
     export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=1
     export OMP_NUM_THREADS=1

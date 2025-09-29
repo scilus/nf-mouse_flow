@@ -1,13 +1,13 @@
 process MULTIQC {
+    tag "$meta.id"
     label 'process_single'
 
     conda "${moduleDir}/environment.yml"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/ef/eff0eafe78d5f3b65a6639265a16b89fdca88d06d18894f90fcdb50142004329/data' :
-        'community.wave.seqera.io/library/multiqc:1.31--1efbafd542a23882' }"
+    container "${ 'multiqc/multiqc:v1.31' }"
 
     input:
-    path  multiqc_files, stageAs: "?/*"
+    tuple val(meta), path(qc_images) // Added input with subject meta field.
+    path  multiqc_files
     path(multiqc_config)
     path(extra_multiqc_config)
     path(multiqc_logo)
@@ -25,7 +25,7 @@ process MULTIQC {
 
     script:
     def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ? "--filename ${task.ext.prefix}.html" : ''
+    def prefix = "--filename ${meta.id}_multiqc_report"
     def config = multiqc_config ? "--config $multiqc_config" : ''
     def extra_config = extra_multiqc_config ? "--config $extra_multiqc_config" : ''
     def logo = multiqc_logo ? "--cl-config 'custom_logo: \"${multiqc_logo}\"'" : ''

@@ -2,7 +2,7 @@ process LABEL_COMBINE {
     tag "$meta.id"
     label 'process_high'
 
-    container "scilus/scilus:2.2.0_cpu"
+    container "scilus/scilus:2.2.0"
 
     input:
         tuple val(meta), path(labels)

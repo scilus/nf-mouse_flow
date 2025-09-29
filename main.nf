@@ -248,5 +248,5 @@ workflow {
         return tuple(meta, files)
     }
 
-    // MULTIQC(ch_multiqc_files, [], ch_multiqc_config.toList(), [], [], [])
+    MULTIQC(ch_multiqc_files, [], ch_multiqc_config.toList(), [], [], [], [])
 }

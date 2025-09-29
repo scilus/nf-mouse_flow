@@ -9,8 +9,8 @@ process TRACKING_MASK {
     output:
         tuple val(meta), path("*__tracking_mask.nii.gz")   , emit: tracking_mask
         tuple val(meta), path("*__seeding_mask.nii.gz")    , emit: seeding_mask
-        tuple val(meta), path("*__mask_tracking_mqc.png")  , emit: mqc
-        path "versions.yml"                      , emit: versions
+        tuple val(meta), path("*__mask_tracking_mqc.png")  , emit: mqc, optional: true
+        path "versions.yml"		                   , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
