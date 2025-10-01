@@ -66,7 +66,7 @@ process PRE_QC {
     # Check gradient sampling scheme
     scil_gradients_validate_sampling ${prefix}__stride_dwi.bval ${prefix}__stride_dwi.bvec --save_viz ./ -f > log_sampling.txt
     echo \$(cat log_sampling.txt)
-    convert -append inputed_gradient_scheme.png optimized_gradient_scheme.png ${prefix}__sampling_mqc.png
+    convert +append inputed_gradient_scheme.png optimized_gradient_scheme.png ${prefix}__sampling_mqc.png
 
     # Check vox isotropic
     iso=\$(mrinfo ${prefix}_rgb_pre.nii.gz -spacing)

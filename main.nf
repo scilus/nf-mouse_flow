@@ -206,5 +206,5 @@ workflow {
         return tuple(meta, files)
     }
 
-    MULTIQC(ch_multiqc_files, [], ch_multiqc_config.toList(), [], channel.fromPath('assets/logo_bg.png'), [], [])
+    MULTIQC(ch_multiqc_files, [], ch_multiqc_config.toList(), [], channel.fromPath('$projectDir/assets/logo_bg.png').toList(), [], [])
 }
