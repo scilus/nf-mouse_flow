@@ -16,7 +16,7 @@ workflow NNUNET {
 
         ch_dwi = ch_nnunet
             .map { meta, dwi, bval, b0, mask ->   
-                [meta, dwi, bval]}
+                [meta, dwi, bval, mask ?: [ ]]}
     
         ch_b0 = ch_nnunet
             .map { meta, dwi, bval, b0, mask ->   
