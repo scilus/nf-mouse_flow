@@ -98,7 +98,7 @@ workflow {
     ch_nnunet = ch_eddy.join(UTILS_EXTRACTB0.out.b0)
     .join(data.mask, by: 0, remainder: true)
             .map { meta, dwi, bval, bvec, b0, mask ->   
-                [meta, dwi, bval, bvec, b0, mask ?: [   ]]}  // Use empty list if mask is null
+                [meta, dwi, bval, b0, mask ?: [   ]]}  // Use empty list if mask is null
     
     NNUNET(ch_nnunet)
 

@@ -7,7 +7,7 @@ include { MOUSE_BETNNUNET } from '../../../modules/local/mouse/betnnunet/main.nf
 workflow NNUNET {
 
     take:
-        ch_nnunet           // channel: [ val(meta), dwi, bval, bvec, b0, mask]
+        ch_nnunet           // channel: [ val(meta), dwi, bval, b0, mask]
 
     main:
 
@@ -15,15 +15,15 @@ workflow NNUNET {
         ch_multiqc_files = Channel.empty()
 
         ch_dwi = ch_nnunet
-            .map { meta, dwi, bval, bvec, b0, mask ->   
-                [meta, dwi, bval, bvec]}
+            .map { meta, dwi, bval, b0, mask ->   
+                [meta, dwi, bval]}
     
         ch_b0 = ch_nnunet
-            .map { meta, dwi, bval, bvec, b0, mask ->   
+            .map { meta, dwi, bval, b0, mask ->   
                 [meta, b0]}
         
         ch_mask = ch_nnunet
-            .map { meta, dwi, bval, bvec, b0, mask ->   
+            .map { meta, dwi, bval, b0, mask ->   
                [meta, mask ?: [ ]]}
 
         IMAGE_POWDERAVERAGE(ch_dwi)
