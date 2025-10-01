@@ -1,5 +1,4 @@
-include { IMAGE_EXTRACTSHELLS } from '../../../modules/local/image/extractshells/main.nf'
-include { MOUSE_VOLUMEMEAN} from '../../../modules/local/mouse/volumemean/main.nf'
+include { IMAGE_POWDERAVERAGE } from '../../../modules/nf-neuro/image/powderaverage/main.nf'
 include { MOUSE_PREPARENNUNET as PREPARE_NNUNET_DWI } from '../../../modules/local/mouse/preparennunet/main.nf'
 include { MOUSE_PREPARENNUNET as PREPARE_NNUNET_B0 } from '../../../modules/local/mouse/preparennunet/main.nf'
 include { MOUSE_BETNNUNET } from '../../../modules/local/mouse/betnnunet/main.nf'
@@ -17,21 +16,20 @@ workflow NNUNET {
 
         ch_dwi = ch_nnunet
             .map { meta, dwi, bval, bvec, b0, mask ->   
-                [meta, dwi, bval, bvec]}.map
+                [meta, dwi, bval, bvec]}
     
         ch_b0 = ch_nnunet
             .map { meta, dwi, bval, bvec, b0, mask ->   
-                [meta, b0]}.map
+                [meta, b0]}
         
         ch_mask = ch_nnunet
             .map { meta, dwi, bval, bvec, b0, mask ->   
-               [meta, mask ?: [   ]]}.map
+               [meta, mask ?: [ ]]}
 
-        IMAGE_EXTRACTSHELLS(ch_dwi)
-        MOUSE_VOLUMEMEAN(IMAGE_EXTRACTSHELLS.out.shells)
+        IMAGE_POWDERAVERAGE(ch_dwi)
     
         PREPARE_NNUNET_B0(ch_b0)
-        PREPARE_NNUNET_DWI(MOUSE_VOLUMEMEAN.out.volume)
+        PREPARE_NNUNET_DWI(IMAGE_POWDERAVERAGE.out.pwd_avg)
 
         ch_for_bet = PREPARE_NNUNET_DWI.out.nnunetready
             .join(PREPARE_NNUNET_B0.out.nnunetready, by: 0, remainder: true)

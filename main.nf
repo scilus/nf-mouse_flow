@@ -45,7 +45,7 @@ workflow get_data {
         dwi_channel = Channel.fromFilePairs("$input/**/*dwi.{nii.gz,bval,bvec}", size: 3, flat: true)
             { it.parent.name }
             .map{ sid, bvals, bvecs, dwi -> [ [id: sid], dwi, bvals, bvecs ] } // Reordering the inputs.
-        
+
         mask_channel = Channel.fromPath("$input/**/*mask.nii.gz")
                         .map { mask_file -> def sid = mask_file.parent.name
                         [[id: sid], mask_file] }
@@ -97,8 +97,8 @@ workflow {
     UTILS_EXTRACTB0(ch_eddy)
     ch_nnunet = ch_eddy.join(UTILS_EXTRACTB0.out.b0)
     .join(data.mask, by: 0, remainder: true)
-            .map { meta, dwi, b0, mask ->   
-                [meta, dwi, b0, mask ?: [   ]]}  // Use empty list if mask is null
+            .map { meta, dwi, bval, bvec, b0, mask ->   
+                [meta, dwi, bval, bvec, b0, mask ?: [   ]]}  // Use empty list if mask is null
     
     NNUNET(ch_nnunet)
 

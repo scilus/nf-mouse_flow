@@ -26,6 +26,11 @@
             "git_sha": "0d983f0f2bddd155cfb9ac3080747850157fd9c8",
             "installed_by": ["modules"]
           },
+          "image/powderaverage": {
+            "branch": "main",
+            "git_sha": "44a8807e115f15d720ff952229c7d7540952b587",
+            "installed_by": ["modules"]
+          },
           "image/resample": {
             "branch": "main",
             "git_sha": "a3fbaa40d649f221b099322105936afe09115c0c",
