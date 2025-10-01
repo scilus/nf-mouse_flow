@@ -130,8 +130,8 @@ process MOUSE_REGISTRATION {
 
     fslmaths ${prefix}__moving_check.nii.gz -mul $mask ${prefix}__moving_check.nii.gz
     fslmaths ${prefix}__ANO_LR.nii.gz -mul $mask ${prefix}__ANO_LR.nii.gz
-    fslmaths ${prefix}__ANO_ANO.nii.gz -mul $mask ${prefix}__ANO_ANO.nii.gz
-    fslmaths ${prefix}__ANO_ToM.nii.gz -mul $mask ${prefix}__ANO_ToM.nii.gz
+    fslmaths ${prefix}__ANO.nii.gz -mul $mask ${prefix}__ANO.nii.gz
+    fslmaths ${prefix}__ToM.nii.gz -mul $mask ${prefix}__ToM.nii.gz
     fslmaths ${prefix}__fixed_check.nii.gz -mul \${AMBA_Mask} ${prefix}__fixed_check.nii.gz
 
     ### ** QC ** ###
