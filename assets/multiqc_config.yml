@@ -22,7 +22,7 @@ custom_data:
     section_name: "PRE QC - RGB Pre/Post correction"
     description: |
       RGB map from RAW data versus RGB map after gradient correction. Corpus callosum should be in red.
-      # -> Using the option param.use_preqc is highly experimental. Please be careful.
+      ### **Using the option param.use_preqc is highly experimental. Please be careful.**
     plot_type: "image"
 
   pre_qc_sampling_mqc:
