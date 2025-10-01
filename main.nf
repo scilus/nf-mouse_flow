@@ -74,14 +74,11 @@ workflow {
         }
 
     if (params.run_preqc){
-        PRE_QC(ch_dwi_bvalbvec)
-        ch_multiqc_files = ch_multiqc_files.mix(PRE_QC.out.rgb_pre_mqc)
-        ch_multiqc_files = ch_multiqc_files.mix(PRE_QC.out.rgb_post_mqc)
+        PRE_QC(ch_dwi_bvalbvec.dwi.join(ch_dwi_bvalbvec.bvs_files))
+        ch_multiqc_files = ch_multiqc_files.mix(PRE_QC.out.rgb_mqc)
         ch_multiqc_files = ch_multiqc_files.mix(PRE_QC.out.sampling_mqc)
-        ch_multiqc_files = ch_multiqc_files.mix(PRE_QC.out.optimized_sampling_mqc)
         if (params.use_preqc){
-            log.warning('Using the output from the preqc module is highly experimental. \
-                         Please be careful.')
+            log.warn('Using the output from the preqc module is highly experimental. Please be careful.')
             ch_after_preqc = PRE_QC.out.dwi
             bvs_after_preqc = PRE_QC.out.bvs
         }
@@ -209,5 +206,5 @@ workflow {
         return tuple(meta, files)
     }
 
-    MULTIQC(ch_multiqc_files, [], ch_multiqc_config.toList(), [], [], [], [])
+    MULTIQC(ch_multiqc_files, [], ch_multiqc_config.toList(), [], channel.fromPath('assets/logo_bg.png'), [], [])
 }

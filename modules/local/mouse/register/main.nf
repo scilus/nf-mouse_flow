@@ -110,9 +110,9 @@ process MOUSE_REGISTRATION {
     antsRegistration --verbose 1 --dimensionality 3 --float 0 \
         --collapse-output-transforms 1  \
         --output [ ${prefix}__,${prefix}__Warped.nii.gz,${prefix}__InverseWarped.nii.gz ]  \
-      	--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
+        --interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
         --initial-moving-transform [${prefix}__b0_masked.nii.gz,\$AMBA_ref,0] \
-       	--transform Rigid[ 0.1 ] --metric MI[ ${prefix}__b0_masked.nii.gz,\$AMBA_ref,1,32,Regular,0.25 ] \
+        --transform Rigid[ 0.1 ] --metric MI[ ${prefix}__b0_masked.nii.gz,\$AMBA_ref,1,32,Regular,0.25 ] \
         \${params_iterations} \
         --transform Affine[ 0.1 ] --metric MI[ ${prefix}__b0_masked.nii.gz,\$AMBA_ref,1,32,Regular,0.25 ] \
         \${params_iterations} \
@@ -127,6 +127,12 @@ process MOUSE_REGISTRATION {
 	antsApplyTransforms -d 3 -r ${prefix}__b0_masked.nii.gz -i \$AMBA_ToM -t ${prefix}__1Warp.nii.gz -t ${prefix}__0GenericAffine.mat -n NearestNeighbor -v -o ${prefix}__ToM.nii.gz -u short
 
     antsApplyTransforms -d 3 -r \$AMBA_ref -i ${prefix}__b0_masked.nii.gz -t [${prefix}__0GenericAffine.mat, 1] -t ${prefix}__1InverseWarp.nii.gz -v -o ${prefix}__fixed_check.nii.gz
+
+    fslmath ${prefix}__moving_check.nii.gz -mul $mask ${prefix}__moving_check.nii.gz
+    fslmath ${prefix}__ANO_LR.nii.gz -mul $mask ${prefix}__ANO_LR.nii.gz
+    fslmath ${prefix}__ANO_ANO.nii.gz -mul $mask ${prefix}__ANO_ANO.nii.gz
+    fslmath ${prefix}__ANO_ToM.nii.gz -mul $mask ${prefix}__ANO_ToM.nii.gz
+    fslmath ${prefix}__fixed_check.nii.gz -mul \${AMBA_Mask} ${prefix}__fixed_check.nii.gz
 
     ### ** QC ** ###
     if $run_qc;

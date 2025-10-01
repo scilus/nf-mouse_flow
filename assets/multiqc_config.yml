@@ -21,16 +21,17 @@ custom_data:
     file_format: "png"
     section_name: "PRE QC - RGB Pre/Post correction"
     description: |
-      RGB map from RAW data
-      RGB map after gradient correction
+      RGB map from RAW data versus RGB map after gradient correction. Corpus callosum should be in red.\n
+      #################################################################################\n
+      # -> Using the option param.use_preqc is highly experimental. Please be careful.#\n
+      #################################################################################
     plot_type: "image"
 
   pre_qc_sampling_mqc:
     file_format: "png"
     section_name: "PRE QC - Raw/Optimized Sampling"
     description: |
-      Gradient sampling scheme from RAW data.
-      Optimized gradient sampling scheme with the same number of directions as RAW data.
+      Gradient sampling scheme from RAW data and optimized gradient sampling scheme with the same number of directions as RAW data.
     plot_type: "image"
 
   dti_qc:

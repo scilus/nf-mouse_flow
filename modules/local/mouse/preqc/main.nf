@@ -28,14 +28,14 @@ process PRE_QC {
     # Fetch strides.
     strides=\$(mrinfo $dwi -strides)
     # Compare strides
-    if [ "\$strides" != "1,2,3,4" ]; then
+    if [ "\$strides" != "1 2 3 4" ]; then
         echo "Strides are not (1,2,3,4), converting to 1,2,3,4."
         echo "Strides were: \$strides"
         echo "Strides are: \$strides"
         mrconvert $dwi -strides 1,2,3,4 \
             -fslgrad $bvec $bval \
-            -export_grad_fsl ${prefix}__stride_dwi.bvec ${prefix}_stride_dwi.bval \
-            ${prefix}_stride_dwi.nii.gz -force
+            -export_grad_fsl ${prefix}__stride_dwi.bvec ${prefix}__stride_dwi.bval \
+            ${prefix}__stride_dwi.nii.gz -force
     else
         echo "Strides are already 1,2,3,4"
         cp $dwi ${prefix}__stride_dwi.nii.gz
@@ -50,7 +50,7 @@ process PRE_QC {
         --not_all \
         --rgb ${prefix}_rgb_pre.nii.gz \
         --fa ${prefix}_fa_pre.nii.gz \
-        --peaks ${prefix}_peaks_pre.nii.gz -f
+        --evecs ${prefix}_peaks_pre.nii.gz -f
 
     # Check gradient directions
     scil_gradients_validate_correct ${prefix}__stride_dwi.bvec \
@@ -59,13 +59,13 @@ process PRE_QC {
                                     ${prefix}__stride_corrected_dwi.bvec -f
 
     # Compute DTI AFTER
-    scil_dti_metrics ${prefix}__stride_dwi.nii.gz ${prefix}__stride_dwi.bval ${prefix}_dwi_post.bvec \
+    scil_dti_metrics ${prefix}__stride_dwi.nii.gz ${prefix}__stride_dwi.bval ${prefix}__stride_corrected_dwi.bvec \
         --not_all \
         --rgb ${prefix}_rgb_post.nii.gz \
 
     # Check gradient sampling scheme
     scil_gradients_validate_sampling ${prefix}__stride_dwi.bval ${prefix}__stride_dwi.bvec --save_viz ./ -f > log_sampling.txt
-    echo $(cat log_sampling.txt)
+    echo \$(cat log_sampling.txt)
     convert -append inputed_gradient_scheme.png optimized_gradient_scheme.png ${prefix}__sampling_mqc.png
 
     # Check vox isotropic
@@ -96,7 +96,7 @@ process PRE_QC {
             ${prefix}__sag_slice_\${mid_slice_sagittal}.png \
             ${prefix}_rgb_\${p}_mqc.png
 
-        convert -annotate +20+230 "RGB" -fill white -pointsize 30 ${prefix}_rgb_\${p}_mqc.png ${prefix}_rgb_\${p}_mqc.png
+        convert -annotate +20+230 "RGB \${p}" -fill white -pointsize 30 ${prefix}_rgb_\${p}_mqc.png ${prefix}_rgb_\${p}_mqc.png
 
         rm -rf *_slice_*png
     done
