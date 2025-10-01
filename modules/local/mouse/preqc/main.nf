@@ -28,17 +28,23 @@ process PRE_QC {
     # Fetch strides.
     strides=\$(mrinfo $dwi -strides)
     # Compare strides
-    if [ "\$strides" != "1 2 3 4" ]; then
+    if [ "\$strides" == "-1 2 3 4" ]; then
         echo "Strides are not (1,2,3,4), converting to 1,2,3,4."
         echo "Strides were: \$strides"
-        echo "Strides are: \$strides"
-        mrconvert $dwi -strides 1,2,3,4 \
-            -fslgrad $bvec $bval \
-            -export_grad_fsl ${prefix}__stride_dwi.bvec ${prefix}__stride_dwi.bval \
-            ${prefix}__stride_dwi.nii.gz -force
-    else
+        echo "Strides are now: \$strides"
+
+        mrconvert $dwi ${prefix}__stride_dwi.nii.gz -strides 1,2,3,4
+        scil_gradients_modify_axes.py $bvec ${prefix}__stride_dwi.bvec -1 2 3
+        cp $bval ${prefix}__stride_dwi.bval
+
+    elif [ "\$strides" == "1 2 3 4" ]; then
         echo "Strides are already 1,2,3,4"
         cp $dwi ${prefix}__stride_dwi.nii.gz
+        cp $bval ${prefix}__stride_dwi.bval
+        cp $bvec ${prefix}__stride_dwi.bvec
+    else
+        echo "Strides are: \$strides"
+        echo "There is no automatic way to transform to 1,2,3,4."
         cp $bval ${prefix}__stride_dwi.bval
         cp $bvec ${prefix}__stride_dwi.bvec
     fi
