@@ -3,14 +3,36 @@ report_comment: >
   analysis pipeline.
 
 report_section_order:
+  pre_qc_rgb:
+    order: -200
+  pre_qc_sampling_mqc:
+    order: -300
   registration_qc:
-    order: -600
+    order: -500
   dti_qc:
-    order: -700
+    order: -600
+  tracking_mask_qc:
+    order: -700    
   tracking_qc:
     order: -800
 
 custom_data:
+  pre_qc_rgb:
+    file_format: "png"
+    section_name: "PRE QC - RGB Pre/Post correction"
+    description: |
+      RGB map from RAW data
+      RGB map after gradient correction
+    plot_type: "image"
+
+  pre_qc_sampling_mqc:
+    file_format: "png"
+    section_name: "PRE QC - Raw/Optimized Sampling"
+    description: |
+      Gradient sampling scheme from RAW data.
+      Optimized gradient sampling scheme with the same number of directions as RAW data.
+    plot_type: "image"
+
   dti_qc:
     file_format: "png"
     section_name: "DTI QC"
@@ -31,6 +53,16 @@ custom_data:
       with the anatomical data and that there are no significant misalignments or distortions...
     plot_type: "image"
 
+  tracking_mask_qc:
+    file_format: "png"
+    section_name: "Tracking Mask QC"
+    description: |
+      This section contains QC images for the tracking mask of the diffusion data. Add specifications
+      regarding how to evaluate those images, for example:
+      To assess the quality of the tracking, ensure that the streamlines are well-defined and
+      follow expected anatomical pathways without excessive crossing or noise...
+    plot_type: "image"
+
   tracking_qc:
     file_format: "png"
     section_name: "Tracking QC"
@@ -42,9 +74,15 @@ custom_data:
     plot_type: "image"
 
 sp:
-  dti_qc:
-    fn: "*dti_mqc.png"
+  pre_qc_rgb:
+    fn: "*rgb_mqc.png"
+  pre_qc_sampling_mqc:
+    fn: "*__sampling_mqc.png"
   registration_qc:
     fn: "*registration_ants_mqc.gif"
+  dti_qc:
+    fn: "*dti_mqc.png"
+  tracking_mask_qc:
+    fn: "*_mask_tracking_mqc.png"
   tracking_qc:
     fn: "*local_tracking_mqc.png"

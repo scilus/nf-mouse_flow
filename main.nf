@@ -73,17 +73,39 @@ workflow {
             bvec:   [meta, bvec]
         }
 
+    if (params.run_preqc){
+        PRE_QC(ch_dwi_bvalbvec)
+        ch_multiqc_files = ch_multiqc_files.mix(PRE_QC.out.rgb_pre_mqc)
+        ch_multiqc_files = ch_multiqc_files.mix(PRE_QC.out.rgb_post_mqc)
+        ch_multiqc_files = ch_multiqc_files.mix(PRE_QC.out.sampling_mqc)
+        ch_multiqc_files = ch_multiqc_files.mix(PRE_QC.out.optimized_sampling_mqc)
+        if (params.use_preqc){
+            log.warning('Using the output from the preqc module is highly experimental. \
+                         Please be careful.')
+            ch_after_preqc = PRE_QC.out.dwi
+            bvs_after_preqc = PRE_QC.out.bvs
+        }
+        else {
+            ch_after_preqc = Channel.empty()
+            bvs_after_preqc = Channel.empty()
+        }
+    }
+    else {
+        ch_after_preqc = ch_dwi_bvalbvec.dwi
+        bvs_after_preqc = ch_dwi_bvalbvec.bvs
+    }
+
     if (params.run_denoising){
-        ch_mppca = ch_dwi_bvalbvec.dwi
+        ch_mppca = ch_after_preqc
             .map{ it + [[]] } // This add one empty list to the channel, since we do not have a mask.
         DENOISING_MPPCA( ch_mppca )
         ch_after_denoising = DENOISING_MPPCA.out.image
     }
     else {
-        ch_after_denoising = ch_dwi_bvalbvec.dwi
+        ch_after_denoising = ch_after_preqc
     }
 
-    ch_eddy = ch_after_denoising.join(ch_dwi_bvalbvec.bvs_files)
+    ch_eddy = ch_after_denoising.join(bvs_after_preqc)
     if (params.run_eddy){
         PREPROC_SINGLEEDDY(ch_eddy)
         ch_after_eddy = PREPROC_SINGLEEDDY.out.dwi_corrected.join(
