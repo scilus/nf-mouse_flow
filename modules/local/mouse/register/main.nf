@@ -129,9 +129,9 @@ process MOUSE_REGISTRATION {
     antsApplyTransforms -d 3 -r \$AMBA_ref -i ${prefix}__b0_masked.nii.gz -t [${prefix}__0GenericAffine.mat, 1] -t ${prefix}__1InverseWarp.nii.gz -v -o ${prefix}__fixed_check.nii.gz
 
     fslmaths ${prefix}__moving_check.nii.gz -mul $mask ${prefix}__moving_check.nii.gz
-    fslmaths ${prefix}__ANO_LR.nii.gz -mul $mask ${prefix}__ANO_LR.nii.gz -odt short
-    fslmaths ${prefix}__ANO.nii.gz -mul $mask ${prefix}__ANO.nii.gz -odt short
-    fslmaths ${prefix}__ToM.nii.gz -mul $mask ${prefix}__ToM.nii.gz -odt short
+    fslmaths ${prefix}__ANO_LR.nii.gz -mul $mask ${prefix}__ANO_LR.nii.gz -odt input
+    fslmaths ${prefix}__ANO.nii.gz -mul $mask ${prefix}__ANO.nii.gz -odt input
+    fslmaths ${prefix}__ToM.nii.gz -mul $mask ${prefix}__ToM.nii.gz -odt input
     fslmaths ${prefix}__fixed_check.nii.gz -mul \${AMBA_Mask} ${prefix}__fixed_check.nii.gz
 
     ### ** QC ** ###
