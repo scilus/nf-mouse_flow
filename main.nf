@@ -2,11 +2,7 @@
 include { DENOISING_MPPCA } from './modules/nf-neuro/denoising/mppca/main.nf'
 include { PREPROC_SINGLEEDDY } from './modules/local/preproc/singleeddy/main.nf'
 include { UTILS_EXTRACTB0 } from './modules/nf-neuro/utils/extractb0/main.nf'
-include { IMAGE_EXTRACTSHELLS } from './modules/local/image/extractshells/main.nf'
-include { MOUSE_VOLUMEMEAN} from './modules/local/mouse/volumemean/main.nf'
-include { MOUSE_PREPARENNUNET as PREPARE_NNUNET_DWI } from './modules/local/mouse/preparennunet/main.nf'
-include { MOUSE_PREPARENNUNET as PREPARE_NNUNET_B0 } from './modules/local/mouse/preparennunet/main.nf'
-include { MOUSE_BETNNUNET } from './modules/local/mouse/betnnunet/main.nf'
+include { NNUNET } from './subworkflows/local/nnunet/'
 include { MOUSE_N4 } from './modules/local/mouse/n4/main.nf'
 include { IMAGE_RESAMPLE as RESAMPLE_DWI} from './modules/nf-neuro/image/resample/main.nf'
 include { IMAGE_RESAMPLE as RESAMPLE_MASK} from './modules/nf-neuro/image/resample/main.nf'
@@ -22,10 +18,11 @@ include { MOUSE_EXTRACTMASKS } from './modules/local/mouse/extractmasks/main.nf'
 include { MOUSE_VOLUMEROISTATS } from './modules/local/mouse/volumeroistats/main.nf'
 include { MOUSE_COMBINESTATS } from './modules/local/mouse/combinestats/main.nf'
 include { MULTIQC } from "./modules/nf-core/multiqc/main"
+include { PRE_QC } from './modules/local/mouse/preqc/main.nf'
 
 workflow get_data {
     main:
-        if ( !params.input && !params.atlas ) {
+        if ( !params.input ) {
             log.info "You must provide an input directory containing all images using:"
             log.info ""
             log.info "        --input=/path/to/[input]             Input directory containing your subjects"
@@ -40,25 +37,21 @@ workflow get_data {
             log.info "                                ├-- *dwi.bval"
             log.info "                                └-- *dwi.bvec"
             log.info ""
-            log.info "        --atlas=/path/to/[atlas]             Input Atlas directory"
             log.info ""
             error "Please resubmit your command with the previous file structure."
         }
         input = file(params.input)
-        atlas = file(params.atlas)
         // ** Loading all files. ** //
-        atlas_channel = Channel.fromPath("$atlas", type: 'dir')
         dwi_channel = Channel.fromFilePairs("$input/**/*dwi.{nii.gz,bval,bvec}", size: 3, flat: true)
             { it.parent.name }
             .map{ sid, bvals, bvecs, dwi -> [ [id: sid], dwi, bvals, bvecs ] } // Reordering the inputs.
-        
+
         mask_channel = Channel.fromPath("$input/**/*mask.nii.gz")
                         .map { mask_file -> def sid = mask_file.parent.name
                         [[id: sid], mask_file] }
 
     emit:
         dwi   = dwi_channel
-        atlas = atlas_channel
         mask  = mask_channel
 }
 
@@ -72,7 +65,7 @@ workflow {
     // ** Now call your input workflow to fetch your files ** //
     data = get_data()
 
-   ch_dwi_bvalbvec = data.dwi
+    ch_dwi_bvalbvec = data.dwi
         .multiMap { meta, dwi, bval, bvec ->
             dwi:    [ meta, dwi ]
             bvs_files: [ meta, bval, bvec ]
@@ -80,17 +73,36 @@ workflow {
             bvec:   [meta, bvec]
         }
 
+    if (params.run_preqc){
+        PRE_QC(ch_dwi_bvalbvec.dwi.join(ch_dwi_bvalbvec.bvs_files))
+        ch_multiqc_files = ch_multiqc_files.mix(PRE_QC.out.rgb_mqc)
+        ch_multiqc_files = ch_multiqc_files.mix(PRE_QC.out.sampling_mqc)
+        if (params.use_preqc){
+            log.warn('Using the output from the preqc module is highly experimental. Please be careful.')
+            ch_after_preqc = PRE_QC.out.dwi
+            bvs_after_preqc = PRE_QC.out.bvs
+        }
+        else {
+            ch_after_preqc = Channel.empty()
+            bvs_after_preqc = Channel.empty()
+        }
+    }
+    else {
+        ch_after_preqc = ch_dwi_bvalbvec.dwi
+        bvs_after_preqc = ch_dwi_bvalbvec.bvs
+    }
+
     if (params.run_denoising){
-        ch_mppca = ch_dwi_bvalbvec.dwi
+        ch_mppca = ch_after_preqc
             .map{ it + [[]] } // This add one empty list to the channel, since we do not have a mask.
         DENOISING_MPPCA( ch_mppca )
         ch_after_denoising = DENOISING_MPPCA.out.image
     }
     else {
-        ch_after_denoising = ch_dwi_bvalbvec.dwi
+        ch_after_denoising = ch_after_preqc
     }
 
-    ch_eddy = ch_after_denoising.join(ch_dwi_bvalbvec.bvs_files)
+    ch_eddy = ch_after_denoising.join(bvs_after_preqc)
     if (params.run_eddy){
         PREPROC_SINGLEEDDY(ch_eddy)
         ch_after_eddy = PREPROC_SINGLEEDDY.out.dwi_corrected.join(
@@ -102,26 +114,19 @@ workflow {
     }
     
     UTILS_EXTRACTB0(ch_eddy)
-    IMAGE_EXTRACTSHELLS(ch_eddy)
-    MOUSE_VOLUMEMEAN(IMAGE_EXTRACTSHELLS.out.shells)
+    ch_nnunet = ch_eddy.join(UTILS_EXTRACTB0.out.b0)
+    .join(data.mask, by: 0, remainder: true)
+            .map { meta, dwi, bval, bvec, b0, mask ->   
+                [meta, dwi, bval, b0, mask ?: [   ]]}  // Use empty list if mask is null
     
-    PREPARE_NNUNET_B0(UTILS_EXTRACTB0.out.b0)
-    PREPARE_NNUNET_DWI(MOUSE_VOLUMEMEAN.out.volume)
-
-    ch_for_bet = PREPARE_NNUNET_DWI.out.nnunetready
-        .join(PREPARE_NNUNET_B0.out.nnunetready, by: 0, remainder: true)
-        .join(data.mask, by: 0, remainder: true)
-        .map { meta, dwi, b0, mask ->
-            [meta, dwi, b0, mask ?: []]}  // Use empty list if mask is null
-
-    MOUSE_BETNNUNET(ch_for_bet)
+    NNUNET(ch_nnunet)
 
     if (params.run_n4) {
         ch_N4 = ch_after_eddy
             .map{ meta, dwi, _bval, _bvec ->
                     tuple(meta, dwi)}
             .join(UTILS_EXTRACTB0.out.b0)
-            .join(MOUSE_BETNNUNET.out.mask)
+            .join(NNUNET.out.mask)
         MOUSE_N4(ch_N4)
         ch_after_n4 = MOUSE_N4.out.dwi_n4
     }
@@ -130,14 +135,13 @@ workflow {
             .map{ meta, dwi, _bval, _bvec -> tuple(meta, dwi)}
     }
     RESAMPLE_DWI(ch_after_n4.map{ meta, dwi -> [meta, dwi, []] }) // Add an empty list for the optional reference image
-    RESAMPLE_MASK(MOUSE_BETNNUNET.out.mask.map{ meta, mask -> [meta, mask, []] })
+    RESAMPLE_MASK(NNUNET.out.mask.map{ meta, mask -> [meta, mask, []] })
 
     IMAGE_CONVERT(RESAMPLE_MASK.out.image)
     
     ch_for_mouse_registration = RESAMPLE_DWI.out.image
                                     .join(ch_after_eddy.map{ [it[0], it[2], it[3]] })
                                     .join(IMAGE_CONVERT.out.image)
-                                    .combine(data.atlas)
     MOUSE_REGISTRATION(ch_for_mouse_registration)
     ch_multiqc_files = ch_multiqc_files.mix(MOUSE_REGISTRATION.out.mqc)
 
@@ -170,12 +174,12 @@ workflow {
 
     TRACKING_MASK(IMAGE_CONVERT.out.image
                     .join(MOUSE_REGISTRATION.out.ANO))
+    ch_multiqc_files = ch_multiqc_files.mix(TRACKING_MASK.out.mqc)
 
     TRACKING_LOCALTRACKING(TRACKING_MASK.out.tracking_mask
                 .join(reconst_sh)
                 .join(TRACKING_MASK.out.seeding_mask))
     ch_multiqc_files = ch_multiqc_files.mix(TRACKING_LOCALTRACKING.out.mqc)
-
 
     MOUSE_EXTRACTMASKS(MOUSE_REGISTRATION.out.ANO_LR)
 
@@ -202,5 +206,5 @@ workflow {
         return tuple(meta, files)
     }
 
-    // MULTIQC(ch_multiqc_files, [], ch_multiqc_config.toList(), [], [], [])
+    MULTIQC(ch_multiqc_files, [], ch_multiqc_config.toList(), [], channel.fromPath("${projectDir}/assets/logo_bg.png").toList(), [], [])
 }

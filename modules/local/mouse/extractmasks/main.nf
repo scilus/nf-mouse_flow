@@ -2,7 +2,7 @@ process MOUSE_EXTRACTMASKS {
     tag "$meta.id"
     label 'process_high'
 
-    container "scilus/mouse-utils:dev"
+    container "scilus/mouse-utils:0.1.0"
 
     input:
         tuple val(meta), path(atlas)

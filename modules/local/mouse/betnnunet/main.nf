@@ -2,7 +2,7 @@ process MOUSE_BETNNUNET {
     tag "$meta.id"
     label 'process_high'
 
-    container "scilus/nnunet_bet_mouse:dev"
+    container "scilus/nnunet_bet_mouse:0.1.0_cpu"
 
     input:
         tuple val(meta), path(dwi), path(b0), path(mask)

@@ -2,16 +2,16 @@ process MOUSE_REGISTRATION {
     tag "$meta.id"
     label 'process_high'
 
-    container "scilus/mouse-utils:dev"
+    container "scilus/mouse-utils:0.1.0"
 
     input:
-        tuple val(meta), path(dwi), path(bval), path(bvec), path(mask), path(atlas_directory)
+        tuple val(meta), path(dwi), path(bval), path(bvec), path(mask)
 
 
     output:
-        tuple val(meta), path("*__0GenericAffine.mat")    , emit: GenericAffine
-        tuple val(meta), path("*__1InverseWarp.nii.gz")   , emit: InverseWarp
-        tuple val(meta), path("*__1Warp.nii.gz")          , emit: Warp
+        tuple val(meta), path("*__0GenericAffine.mat")      , emit: GenericAffine
+        tuple val(meta), path("*__1InverseWarp.nii.gz")     , emit: InverseWarp
+        tuple val(meta), path("*__1Warp.nii.gz")            , emit: Warp
         tuple val(meta), path("*__ANO_LR.nii.gz")           , emit: ANO_LR
         tuple val(meta), path("*__ANO.nii.gz")              , emit: ANO
         tuple val(meta), path("*__ToM.nii.gz")              , emit: TOM
@@ -78,16 +78,24 @@ process MOUSE_REGISTRATION {
 
     echo "Atlas resolution: \$atlas_resolution"
 
-    AMBA_ref=$atlas_directory/\${atlas_resolution}_AMBA_ref.nii.gz
-    AMBA_inv=$atlas_directory/\${atlas_resolution}_AMBA_inv_novent.nii.gz
-    AMBA_ANO=$atlas_directory/\${atlas_resolution}_AMBA_ANO.nii.gz
-    AMBA_LR=$atlas_directory/\${atlas_resolution}_AMBA_LR.nii.gz
-    AMBA_ToM=$atlas_directory/\${atlas_resolution}_AMBA_ToM.nii.gz
+    AMBA_ref=/atlas/\${atlas_resolution}_AMBA_ref.nii.gz
+    AMBA_inv=/atlas/\${atlas_resolution}_AMBA_inv_novent.nii.gz
+    AMBA_ANO=/atlas/\${atlas_resolution}_AMBA_ANO.nii.gz
+    AMBA_LR=/atlas/\${atlas_resolution}_AMBA_LR.nii.gz
+    AMBA_ToM=/atlas/\${atlas_resolution}_AMBA_ToM.nii.gz
+    AMBA_Mask=/atlas/\${atlas_resolution}_AMBA_mask.nii.gz
 
+    # Laplacian
 	ImageMath  3 ${prefix}__b0_lp.nii.gz  Laplacian ${prefix}__b0_masked.nii.gz $laplacian_value
 	ImageMath  3 ${prefix}__fa_lp.nii.gz  Laplacian ${prefix}__fa.nii.gz $laplacian_value
 	ImageMath  3 AMBA_ref_lp.nii.gz  Laplacian \$AMBA_ref $laplacian_value
 	ImageMath  3 AMBA_inv_lp.nii.gz  Laplacian \$AMBA_inv $laplacian_value
+
+    # Apply mask to b0 and FA and AMBA masks
+    fslmaths ${prefix}__b0_lp.nii.gz -mul $mask ${prefix}__b0_lp.nii.gz
+    fslmaths ${prefix}__fa_lp.nii.gz -mul $mask ${prefix}__fa_lp.nii.gz
+    fslmaths AMBA_ref_lp.nii.gz -mul \${AMBA_Mask} AMBA_ref_lp.nii.gz
+    fslmaths AMBA_inv_lp.nii.gz -mul \${AMBA_Mask} AMBA_inv_lp.nii.gz
 
     # Get Affine convergence
     echo "Running SyN"
@@ -102,9 +110,9 @@ process MOUSE_REGISTRATION {
     antsRegistration --verbose 1 --dimensionality 3 --float 0 \
         --collapse-output-transforms 1  \
         --output [ ${prefix}__,${prefix}__Warped.nii.gz,${prefix}__InverseWarped.nii.gz ]  \
-      	--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
+        --interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
         --initial-moving-transform [${prefix}__b0_masked.nii.gz,\$AMBA_ref,0] \
-       	--transform Rigid[ 0.1 ] --metric MI[ ${prefix}__b0_masked.nii.gz,\$AMBA_ref,1,32,Regular,0.25 ] \
+        --transform Rigid[ 0.1 ] --metric MI[ ${prefix}__b0_masked.nii.gz,\$AMBA_ref,1,32,Regular,0.25 ] \
         \${params_iterations} \
         --transform Affine[ 0.1 ] --metric MI[ ${prefix}__b0_masked.nii.gz,\$AMBA_ref,1,32,Regular,0.25 ] \
         \${params_iterations} \
@@ -119,6 +127,12 @@ process MOUSE_REGISTRATION {
 	antsApplyTransforms -d 3 -r ${prefix}__b0_masked.nii.gz -i \$AMBA_ToM -t ${prefix}__1Warp.nii.gz -t ${prefix}__0GenericAffine.mat -n NearestNeighbor -v -o ${prefix}__ToM.nii.gz -u short
 
     antsApplyTransforms -d 3 -r \$AMBA_ref -i ${prefix}__b0_masked.nii.gz -t [${prefix}__0GenericAffine.mat, 1] -t ${prefix}__1InverseWarp.nii.gz -v -o ${prefix}__fixed_check.nii.gz
+
+    fslmaths ${prefix}__moving_check.nii.gz -mul $mask ${prefix}__moving_check.nii.gz
+    fslmaths ${prefix}__ANO_LR.nii.gz -mul $mask ${prefix}__ANO_LR.nii.gz -odt input
+    fslmaths ${prefix}__ANO.nii.gz -mul $mask ${prefix}__ANO.nii.gz -odt input
+    fslmaths ${prefix}__ToM.nii.gz -mul $mask ${prefix}__ToM.nii.gz -odt input
+    fslmaths ${prefix}__fixed_check.nii.gz -mul \${AMBA_Mask} ${prefix}__fixed_check.nii.gz
 
     ### ** QC ** ###
     if $run_qc;
