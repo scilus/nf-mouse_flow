@@ -2,7 +2,7 @@ include { IMAGE_POWDERAVERAGE } from '../../../modules/nf-neuro/image/powderaver
 include { MOUSE_PREPARENNUNET as PREPARE_NNUNET_DWI } from '../../../modules/local/mouse/preparennunet/main.nf'
 include { MOUSE_PREPARENNUNET as PREPARE_NNUNET_B0 } from '../../../modules/local/mouse/preparennunet/main.nf'
 include { MOUSE_BETNNUNET } from '../../../modules/local/mouse/betnnunet/main.nf'
-
+include { MOUSE_REGRIDMASK } from '../../../modules/local/mouse/regridmask/main.nf'
 
 workflow NNUNET {
 
@@ -26,8 +26,9 @@ workflow NNUNET {
             .map { meta, dwi, bval, b0, mask ->   
                [meta, mask ?: [ ]]}
 
+
         IMAGE_POWDERAVERAGE(ch_dwi)
-    
+
         PREPARE_NNUNET_B0(ch_b0)
         PREPARE_NNUNET_DWI(IMAGE_POWDERAVERAGE.out.pwd_avg)
 
@@ -37,10 +38,15 @@ workflow NNUNET {
             .map { meta, dwi, b0, mask ->   
                 [meta, dwi, b0, mask ?: [   ]]}  // Use empty list if mask is null
 
-        MOUSE_BETNNUNET(ch_for_bet) 
+        MOUSE_BETNNUNET(ch_for_bet)
+
+        ch_for_regrid = ch_b0
+            .join(MOUSE_BETNNUNET.out.mask)
+
+        MOUSE_REGRIDMASK(ch_for_regrid)
 
     emit:
-        mask = MOUSE_BETNNUNET.out.mask              // channel: [ val(meta), dwi-preproc ]
+        mask = MOUSE_BETNNUNET.out.mask                     // channel: [ val(meta), mask ]
         mqc                 = ch_multiqc_files              // channel: [ val(meta), mqc ]
         versions            = ch_versions                   // channel: [ versions.yml ]
 }
