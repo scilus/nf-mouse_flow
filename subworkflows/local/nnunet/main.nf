@@ -46,7 +46,7 @@ workflow NNUNET {
         MOUSE_REGRIDMASK(ch_for_regrid)
 
     emit:
-        mask = MOUSE_BETNNUNET.out.mask                     // channel: [ val(meta), mask ]
+        mask = MOUSE_REGRIDMASK.out.mask                     // channel: [ val(meta), mask ]
         mqc                 = ch_multiqc_files              // channel: [ val(meta), mqc ]
         versions            = ch_versions                   // channel: [ versions.yml ]
 }

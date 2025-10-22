@@ -22,8 +22,10 @@ process MOUSE_PREPARENNUNET {
     min_res=\$(tr ' ' '\n' <<< "\$extract_res" | awk 'NR==1 || \$1 < min {min=\$1} END {print min}')
     min_res_um=\$(echo \$min_res '*' 1000 | bc)
 
-    if (( $(echo "\$min_res_um < 100" | bc -l) )); then
+    if (( \$(echo "\$min_res_um < 100" | bc -l) )); then
         mrgrid -voxel 0.1 $image regrid ${prefix}_ready_for_preproc.nii.gz
+    else
+        cp $image ${prefix}_ready_for_preproc.nii.gz
     fi
 
     OUTPUT_N4_FIRST=${prefix}_first_N4.nii.gz

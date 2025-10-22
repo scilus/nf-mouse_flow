@@ -2,12 +2,12 @@ process MOUSE_REGRIDMASK {
     tag "$meta.id"
     label 'process_high'
 
-    container "mrtrix/mrtrix:3.0.7"
+    container "mrtrix3/mrtrix3:3.0.7"
 
     input:
         tuple val(meta), path(ref), path(mask)
     output:
-        tuple val(meta), path("*__mask.nii.gz")   , emit: mask
+        tuple val(meta), path("*_mask.nii.gz")   , emit: mask
         path "versions.yml"                       , emit: versions
 
     when:
@@ -17,23 +17,11 @@ process MOUSE_REGRIDMASK {
     def prefix = task.ext.prefix ?: "${meta.id}"
 
     """
-	export OMP_NUM_THREADS=$task.cpus
-	export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=$task.cpus
-	export OPENBLAS_NUM_THREADS=1
+    export OMP_NUM_THREADS=$task.cpus
+    export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=$task.cpus
+    export OPENBLAS_NUM_THREADS=1
 
-    ref_extract_res=\$(mrinfo ${ref} -spacing)
-    ref_min_res=\$(tr ' ' '\n' <<< "\$extract_res" | awk 'NR==1 || \$1 < min {min=\$1} END {print min}')
-    ref_min_res_um=\$(echo \$min_res '*' 1000 | bc)
-    
-    mask_extract_res=\$(mrinfo ${ref} -spacing)
-    mask_min_res=\$(tr ' ' '\n' <<< "\$extract_res" | awk 'NR==1 || \$1 < min {min=\$1} END {print min}')
-    mask_min_res_um=\$(echo \$min_res '*' 1000 | bc)
-
-    if (( $(echo "\$mask_min_res_um < \$ref_min_res_um" | bc -l) )); then
-        mrgrid -template $ref -interp nearest $mask ${prefix}__mask.nii.gz
-    else
-        mv 
-    fi
+    mrgrid -template $ref -interp nearest $mask regrid ${prefix}___mask.nii.gz
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
