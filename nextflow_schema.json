@@ -1,0 +1,176 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/scilus/nf-mouse_flow/nextflow_schema.json",
+    "title": "scilus/nf-mouse_flow pipeline parameters",
+    "description": "nf-mouse_flow is a neuroimaging pipeline to process ex-vivo dMRI data.",
+    "type": "object",
+    "$defs": {
+        "input_output_options": {
+            "title": "Input/output options",
+            "type": "object",
+            "fa_icon": "fas fa-terminal",
+            "description": "Define where the pipeline should find input data and save output data.",
+            "required": [
+                "input"
+            ],
+            "properties": {
+                "input": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "schema": "assets/schema_input.json",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$",
+                    "description": "Path to comma-separated file containing information about the samples in the experiment.",
+                    "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row.",
+                    "fa_icon": "fas fa-file-csv"
+                },
+                "outdir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure.",
+                    "fa_icon": "fas fa-folder-open",
+                    "default": "results_mouse"
+                }
+            }
+        },
+        "generic_options": {
+            "title": "Generic options",
+            "type": "object",
+            "fa_icon": "fas fa-file-import",
+            "description": "Less common options for the pipeline, typically set in a config file.",
+            "help_text": "These options are common to all nf-core pipelines and allow you to customise some of the core preferences for how the pipeline runs.\n\nTypically these options would be set in a Nextflow config file loaded for all pipeline runs, such as `~/.nextflow/config`.",
+            "properties": {
+                "trace_report_suffix": {
+                    "type": "string",
+                    "fa_icon": "far calendar",
+                    "description": "Suffix to add to the trace report filename. Default is the date and time in the format yyyy-MM-dd_HH-mm-ss.",
+                    "hidden": true
+                }
+            }
+        }
+    },
+    "allOf": [
+        {
+            "$ref": "#/$defs/input_output_options"
+        },
+        {
+            "$ref": "#/$defs/generic_options"
+        }
+    ],
+    "properties": {
+        "run_denoising": {
+            "type": "boolean",
+            "default": true,
+            "description": "Set it to false if you don't want to denoise your data.",
+            "fa_icon": "fas fa-brain"
+        },
+        "run_eddy": {
+            "type": "boolean",
+            "default": true,
+            "description": "Set it to false if you don't want to use eddy correction.",
+            "fa_icon": "fas fa-brain"
+        },
+        "run_n4": {
+            "type": "boolean",
+            "default": true,
+            "description": "Set it to false if you don't want to use N4.",
+            "fa_icon": "fas fa-brain"
+        },
+        "use_fodf": {
+            "type": "boolean",
+            "description": "Set it to true if you want to fODF instead of QBall reconstruction.",
+            "fa_icon": "fas fa-brain"
+        },
+        "lean_output": {
+            "type": "boolean",
+            "default": true,
+            "hidden": true,
+            "fa_icon": "fas fa-brain"
+        },
+        "use_gpu": {
+            "type": "boolean",
+            "hidden": true,
+            "fa_icon": "fas fa-brain"
+        },
+        "run_preqc": {
+            "type": "boolean",
+            "hidden": true,
+            "fa_icon": "fas fa-brain"
+        },
+        "processes": {
+            "type": "integer",
+            "default": 10,
+            "hidden": true,
+            "fa_icon": "fas fa-brain"
+        },
+        "use_preqc": {
+            "type": "boolean",
+            "description": "Set it to true, if you want to use the output of the preqc.",
+            "fa_icon": "fas fa-brain"
+        },
+        "max_dti_shell_value": {
+            "type": "integer",
+            "default": 3500,
+            "hidden": true,
+            "description": "Maximum DTI shell value used.",
+            "fa_icon": "fas fa-brain"
+        },
+        "nvox_min": {
+            "type": "integer",
+            "default": 100,
+            "hidden": true,
+            "description": "Minimum number of voxels to include in the computation of the FRF.",
+            "fa_icon": "fas fa-brain"
+        },
+        "sh_order": {
+            "type": "integer",
+            "default": 6,
+            "hidden": true,
+            "description": "Spherical harmonics order used in the FODF/QBall processing step.",
+            "fa_icon": "fas fa-brain"
+        },
+        "local_nbr_seeds": {
+            "type": "integer",
+            "default": 1,
+            "hidden": true,
+            "description": "Number of seeds used in the local tracking step.",
+            "fa_icon": "fas fa-brain"
+        },
+        "local_step": {
+            "type": "number",
+            "default": 0.05,
+            "hidden": true,
+            "description": "Step value used in the local tracking step.",
+            "fa_icon": "fas fa-brain"
+        },
+        "local_theta": {
+            "type": "number",
+            "default": 45,
+            "hidden": true,
+            "description": "Theta value used in the local tracking step.",
+            "fa_icon": "fas fa-brain"
+        },
+        "local_rk_order": {
+            "type": "integer",
+            "default": 1,
+            "hidden": true,
+            "description": "The order of the Runge-Kutta integration used for the step function.",
+            "fa_icon": "fas fa-brain"
+        },
+        "local_min_len": {
+            "type": "integer",
+            "default": 3,
+            "hidden": true,
+            "description": "Minimum length used in the local tracking step (mm).",
+            "fa_icon": "fas fa-brain"
+        },
+        "local_max_len": {
+            "type": "integer",
+            "default": 12,
+            "hidden": true,
+            "description": "Maximum length used in the local tracking step (mm).",
+            "fa_icon": "fas fa-brain"
+        }
+    }
+}
