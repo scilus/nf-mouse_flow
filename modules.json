@@ -43,7 +43,7 @@
           },
           "reconst/fodf": {
             "branch": "main",
-            "git_sha": "6243a8961471549d479d882b1cf3a7bd7106c527",
+            "git_sha": "c399791d89aad88aceedec1bc5221dfeb0952cd5",
             "installed_by": ["modules"]
           },
           "reconst/frf": {
