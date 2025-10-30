@@ -1,6 +1,6 @@
 process PRE_QC {
     tag "$meta.id"
-    label 'process_high'
+    label 'process_low'
 
     container "scilus/scilus:2.2.0"
 
