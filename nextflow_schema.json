@@ -1,8 +1,8 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://raw.githubusercontent.com/scilus/nf-mouse_flow/nextflow_schema.json",
-    "title": "scilus/nf-mouse_flow pipeline parameters",
-    "description": "nf-mouse_flow is a neuroimaging pipeline to process ex-vivo dMRI data.",
+    "$id": "https://raw.githubusercontent.com/scilus/nf-mouse/nextflow_schema.json",
+    "title": "scilus/nf-mouse pipeline parameters",
+    "description": "nf-mouse is a neuroimaging pipeline to process ex-vivo dMRI data.",
     "type": "object",
     "$defs": {
         "input_output_options": {
